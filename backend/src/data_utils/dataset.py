@@ -50,4 +50,4 @@ def get_dataloaders(train_path, val_path, test_path, model_name, batch_size, max
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size)
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
 
-    return train_dataloader, val_dataloader, test_dataloader
+    return train_dataloader, val_dataloader, test_dataloader, tokenizer

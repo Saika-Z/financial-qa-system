@@ -1,14 +1,14 @@
 '''
  # Author: Wenqing Zhao
  # Date: 2025-12-06 20:30:07
- # LastEditTime: 2025-12-08 17:58:35
+ # LastEditTime: 2025-12-08 20:29:16
  # Description: 
- # FilePath: /financial-qa-system/backend/app/services/train_sentiment_model.py
+ # FilePath: /financial-qa-system/backend/src/train_sentiment_model.py
 '''
 # backend/src/train_sentiment_model.py
-
 import torch
-from transformers import BertForSequenceClassification, AdamW
+from torch.optim import AdamW
+from transformers import BertForSequenceClassification
 import os
 
 # 导入自定义模块

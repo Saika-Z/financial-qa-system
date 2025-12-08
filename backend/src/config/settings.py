@@ -12,10 +12,10 @@ VAL_DATA_PATH = os.path.join(DATA_ROOT, 'val.csv')
 TEST_DATA_PATH = os.path.join(DATA_ROOT, 'test.csv')
 
 
-# ------Sentiment Analysis Model Training Settings ----
-MODEL_NAME ='bert-base-uncased',    # Define constants for model training
-NUM_LABELS = 3,                     # Positive, Neutral, Negative
-BATCH_SIZE = 8,                     # Batch size for training and evaluation
-EPOCHS =4,                          # Number of training epochs 
-LEARNING_RATE = 2e-5,               # Learning rate for the optimizer
-MAX_SEQ_LEN = 128                   # Path to save the trained model
+# ------ Sentiment Analysis Model Training Settings ----
+MODEL_NAME = 'bert-base-uncased'    # name of the pre-trained model
+NUM_LABELS = 3                      # the number of sentiment classes: positive, negative, neutral
+BATCH_SIZE = 8                      # batch size for training and evaluation
+EPOCHS = 4                          # epochs for training
+LEARNING_RATE = 2e-5                # learning rate for optimizer
+MAX_SEQ_LEN = 128                   # maximum sequence length for tokenization
