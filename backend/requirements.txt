@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+transformers
+faiss-cpu
+sentence-transformers
+
+#kaggle #Kaggle 数据
+#kaggle datasets download -d sbhatti/financial-sentiment-analysis
+
+#yfinance #Yahoo Finance
+
+# 测试
+#pip install pandas transformers torch tqdm
