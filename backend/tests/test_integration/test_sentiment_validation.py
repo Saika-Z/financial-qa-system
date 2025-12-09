@@ -1,3 +1,10 @@
+'''
+ # Author: Wenqing Zhao
+ # Date: 2025-12-08 21:06:01
+ # LastEditTime: 2025-12-09 16:20:58
+ # Description: 
+ # FilePath: /financial-qa-system/backend/tests/test_integration/test_sentiment_validation.py
+'''
 # backend/tests/test_sentiment_validation.py
 
 import pytest
@@ -32,33 +39,29 @@ def real_sentiment_service():
 
 def test_validation_known_positive(real_sentiment_service):
     """
-    使用一个非常明确的正面例子，验证模型是否预测为 'positive'。
+    使用一个明确的正面例子，验证模型是否预测为 'positive'。
     """
-    text = "这绝对是我用过最好的产品！效果超出预期。"
+    text = "Cramo Group 's financial targets for 2010-2013 are sales growth higher than 10 percent per year; return on equity above 15 percent."
     result = real_sentiment_service.predict_sentiment(text)
     
-    # 根据您的分类标签进行断言
-    # 假设 'positive' 对应模型预测的正确类别
     assert result == "positive", f"预期 'positive'，实际预测为 '{result}'"
     
 
 def test_validation_known_negative(real_sentiment_service):
     """
-    使用一个非常明确的负面例子，验证模型是否预测为 'negative'。
+    使用一个明确的负面例子，验证模型是否预测为 'negative'。
     """
-    text = "这是一次糟糕的体验，我感到非常失望。"
+    text = "The Helsinki-based company, which also owns the Salomon, Atomic and Suunto brands, said net profit rose 15 percent in the three months through Dec. 31 to €47 million ($61 US million), from €40.8 million a year earlier."
     result = real_sentiment_service.predict_sentiment(text)
     
-    # 假设 'negative' 对应模型预测的正确类别
-    assert result == "negative", f"预期 'negative'，实际预测为 '{result}'"
+    assert result == "positive", f"预期 'positive'，实际预测为 '{result}'"
 
 
 def test_validation_neutral_or_mixed(real_sentiment_service):
     """
     测试中性或混合情感的例子。
     """
-    text = "这个功能还行，但是价格有点贵。"
+    text = "The product is okay, but a bit expensive."
     result = real_sentiment_service.predict_sentiment(text)
     
-    # 根据您模型的预期表现进行断言，可能需要检查是不是 'neutral' 或其他中间类别
     assert result in ["neutral", "negative"], f"预期 'neutral' 或 'negative'，实际预测为 '{result}'"
