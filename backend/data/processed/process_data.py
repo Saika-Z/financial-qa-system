@@ -1,7 +1,7 @@
 '''
  # Author: Wenqing Zhao
  # Date: 2025-12-06 20:29:42
- # LastEditTime: 2025-12-08 15:13:48
+ # LastEditTime: 2025-12-09 11:22:53
  # Description: 
  # FilePath: /financial-qa-system/backend/data/processed/process_data.py
 '''
@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 kaggle_data = "backend/data/kaggle_data.csv"
 data = pd.read_csv(kaggle_data)
 
-# 标签编码（假设 'positive': 2, 'neutral': 1, 'negative': 0）
+# 标签编码（假设 'positive': 2, 'negative': 1, 'neutral': 0）
 label_map = {'positive': 2, 'negative': 1, 'neutral': 0}
 data['label'] = data['Sentiment'].map(label_map)
 #print(data.head())

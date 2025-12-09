@@ -1,7 +1,7 @@
 '''
  # Author: Wenqing Zhao
  # Date: 2025-12-08 18:23:25
- # LastEditTime: 2025-12-08 22:31:17
+ # LastEditTime: 2025-12-09 10:52:28
  # Description: 
  # FilePath: /financial-qa-system/backend/app/services/sentiment_service.py
 '''
@@ -38,7 +38,8 @@ class SentimentService:
             logits = outputs.logits
             predicted_class = torch.argmax(logits, dim=1).item()
         
-        sentiment = {0: "positive", 1: "negative", 2: "neutral"}
+        # ensure the mapping matches .data/processed/process_data.py 'positive': 2, 'negative': 1, 'neutral': 0
+        sentiment = {2: "positive", 1: "negative", 0: "neutral"}
         return sentiment[predicted_class]
 
 # 初始化推理服务
