@@ -9,5 +9,19 @@ sentence-transformers
 
 #yfinance #Yahoo Finance
 
+#公司财报和公司简介：来自 SEC (EDGAR)
+#pip install sec-edgar-downloader
+
+# 新闻数据抓取：来自 Google News
+#pip install GoogleNews pandas
+
+# 通过 wikipedia-api 库来抓取金融相关的百科内容
+#pip install wikipedia-api
+# 通过 BeautifulSoup 抓取 Investopedia 网站上的金融条目
+#pip install requests beautifulsoup4
+
+# 向量数据库和嵌入模型
+# pip install langchain sentence-transformers chromadb tiktoken
+
 # 测试
 #pip install pandas transformers torch tqdm

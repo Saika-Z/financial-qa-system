@@ -4,7 +4,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 
-DATA_ROOT = os.path.join(PROJECT_ROOT, 'data', 'processed')
+DATA_ROOT = os.path.join(PROJECT_ROOT, 'data', 'processed','kaggle_split')
 MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, 'models', 'sentiment_model')
 
 TRAIN_DATA_PATH = os.path.join(DATA_ROOT, 'train.csv')
