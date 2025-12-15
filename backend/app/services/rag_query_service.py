@@ -59,7 +59,7 @@ class RAGQueryService:
                 torch_dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32
             )
 
-            pipeline = pipeline(
+            pipe = pipeline(
                 "text-generation",
                 model=model,
                 tokenizer=tokenizer,
@@ -69,7 +69,7 @@ class RAGQueryService:
                 return_full_text=False,
                 device=device
             )
-            self.llm = HuggingFacePipeline(pipeline=pipeline)
+            self.llm = HuggingFacePipeline(pipeline=pipe)
             print("LLM Pipeline initialized successfully. on {device}. ")
 
         except Exception as e:
