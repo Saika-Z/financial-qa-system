@@ -12,13 +12,13 @@ from backend.app.services.finance_service import FinanceService
 
 router = APIRouter()
 
-# 实例化 FinanceService
+# Instantiate FinanceService
 finance_service = FinanceService()
 
 @router.get("/stock/{ticker}/data")
 async def get_stock_data(ticker: str, period: str = "1d", interval: str = "1m"):
     """
-    获取某只股票的实时数据
+    Get real-time data for a specific stock.
     """
     data = finance_service.get_stock_data(ticker, period, interval)
     return data.to_dict()  # 将数据转换为字典返回
@@ -26,7 +26,7 @@ async def get_stock_data(ticker: str, period: str = "1d", interval: str = "1m"):
 @router.get("/stock/{ticker}/info")
 async def get_stock_info(ticker: str):
     """
-    获取某只股票的基本信息
+    Get basic information about a particular stock.
     """
     info = finance_service.get_stock_info(ticker)
     return info
@@ -34,7 +34,7 @@ async def get_stock_info(ticker: str):
 @router.get("/stock/{ticker}/news")
 async def get_stock_news(ticker: str):
     """
-    获取某只股票的新闻
+    Get news about a specific stock.
     """
     news = finance_service.get_news(ticker)
     return news

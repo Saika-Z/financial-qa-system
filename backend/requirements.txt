@@ -21,7 +21,10 @@ sentence-transformers
 #pip install requests beautifulsoup4
 
 # 向量数据库和嵌入模型
-# pip install langchain sentence-transformers chromadb tiktoken
+# pip install langchain sentence-transformers chromadb tiktoken langchain-huggingface langchain-community langchain-chroma
 
 # 测试
 #pip install pandas transformers torch tqdm
+
+# 大模型支持
+#pip install transformers accelerate bitsandbytes torch

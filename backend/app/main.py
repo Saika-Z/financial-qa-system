@@ -11,38 +11,38 @@ from backend.app.core.config import settings
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-# --- 1. 定义请求体数据结构 ---
-# 在 main.py 或单独的 schemas.py 中定义
+# --- 1. Define the request body data structure. ---
+# Define it in main.py or a separate schemas.py file.
 class SentimentRequest(BaseModel):
     """定义POST请求体的数据结构"""
     text: str
 
-# --- 2. 创建 API 路由 ---
+# --- 2. Create API routes ---
 api_router = APIRouter()
 
 @api_router.post("/predict", tags=["Sentiment"])
 def predict_sentiment_endpoint(request_data: SentimentRequest):
-    """接收文本并返回预测的情感结果"""
+    """Receives text and returns the predicted sentiment result."""
     
-    # 获取服务实例 (第一次调用时加载模型)
+    # Obtain a service instance (the model is loaded on the first call).
     sentiment_service = get_sentiment_service()
     
-    # 调用核心预测方法
+    # Calling the core prediction method
     predicted_sentiment = sentiment_service.predict_sentiment(request_data.text)
     
     return {"text": request_data.text, "sentiment": predicted_sentiment}
 
 
-# --- 3. 初始化 FastAPI 应用 ---
+# --- 3. Initialize the FastAPI application. ---
 def create_app():
-    # 尝试加载服务，如果失败则抛出错误并退出
+    # Attempt to load the service; if it fails, throw an error and exit.
     try:
-        # 预先加载模型，确保服务启动时模型已就绪
+        # Pre-load the model to ensure it is ready when the service starts.
         get_sentiment_service() 
         print("✅ Sentiment Service loaded successfully.")
     except Exception as e:
         print(f"❌ FATAL ERROR: Failed to load Sentiment Service: {e}")
-        # 在实际部署中，可能需要更优雅地处理或直接 raise 阻止服务启动
+        # In a real-world deployment, it might be necessary to handle this more gracefully or directly raise an error to prevent the service from starting.
         raise RuntimeError("Service initialization failed.") from e
 
     app = FastAPI(
@@ -50,13 +50,13 @@ def create_app():
         version="1.0.0",
     )
     
-    # 包含您的路由
+    # Includes your route
     app.include_router(api_router)
     return app
 
 app = create_app()
 
-# 注意：运行命令不再是 python -m backend.app.main，而是 uvicorn
+# Note: The command to run is no longer `python -m backend.app.main`, but `uvicorn`.
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

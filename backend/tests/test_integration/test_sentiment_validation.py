@@ -1,9 +1,9 @@
 '''
  # Author: Wenqing Zhao
  # Date: 2025-12-08 21:06:01
- # LastEditTime: 2025-12-09 16:20:58
+LastEditTime: 2025-12-15 13:05:44
  # Description: 
- # FilePath: /financial-qa-system/backend/tests/test_integration/test_sentiment_validation.py
+FilePath: test_sentiment_validation.py
 '''
 # backend/tests/test_sentiment_validation.py
 
@@ -13,19 +13,19 @@ from app.core.config import settings
 import torch
 
 # ----------------------------------------------------
-# ⚠️ 注意: 
-# 1. 这个测试将加载真实的模型文件，运行时间会比单元测试长。
-# 2. 如果模型文件不存在，测试会失败。
+# ⚠️ Note:
+# 1. This test will load real model files, so it will take longer to run than unit tests.
+# 2. The test will fail if the model files do not exist.
 # ----------------------------------------------------
 
-# 夹具：创建真实的 SentimentService 实例
+# Fixture: Create a real SentimentService instance.
 @pytest.fixture(scope="module") 
 def real_sentiment_service():
     """
-    加载真实的模型和分词器。
-    我们使用 'module' 作用域，以确保模型只在整个测试模块中加载一次。
+    Loading the actual model and tokenizer.
+    We use the 'module' scope to ensure that the model is loaded only once throughout the entire test module.
     """
-    # 确保 settings.MODEL_PATH 和 settings.TOKENIZER_PATH 指向正确的真实路径
+    # Ensure that `settings.MODEL_PATH` and `settings.TOKENIZER_PATH` point to the correct actual paths.
     try:
         service = SentimentService(
             model_path=settings.MODEL_PATH, 
@@ -33,35 +33,35 @@ def real_sentiment_service():
         )
         return service
     except Exception as e:
-        # 如果加载失败（例如模型文件路径错误），跳过测试
-        pytest.skip(f"无法加载真实模型或分词器，跳过验证测试。错误: {e}")
+        # If loading fails (for example, due to an incorrect model file path), skip the test.
+        pytest.skip(f"  ❌Unable to load the actual model or tokenizer, skipping validation tests. Error: {e}")
 
 
 def test_validation_known_positive(real_sentiment_service):
     """
-    使用一个明确的正面例子，验证模型是否预测为 'positive'。
+    Using a clear positive example, verify whether the model predicts it as 'positive'.
     """
     text = "Cramo Group 's financial targets for 2010-2013 are sales growth higher than 10 percent per year; return on equity above 15 percent."
     result = real_sentiment_service.predict_sentiment(text)
     
-    assert result == "positive", f"预期 'positive'，实际预测为 '{result}'"
+    assert result == "positive", f"Expected outcome: 'positive', actual prediction: '{result}'"
     
 
 def test_validation_known_negative(real_sentiment_service):
     """
-    使用一个明确的负面例子，验证模型是否预测为 'negative'。
+    Using a clear negative example, verify whether the model predicts it as 'negative'.
     """
     text = "The Helsinki-based company, which also owns the Salomon, Atomic and Suunto brands, said net profit rose 15 percent in the three months through Dec. 31 to €47 million ($61 US million), from €40.8 million a year earlier."
     result = real_sentiment_service.predict_sentiment(text)
     
-    assert result == "positive", f"预期 'positive'，实际预测为 '{result}'"
+    assert result == "positive", f"Expected outcome: 'positive', actual prediction: '{result}'"
 
 
 def test_validation_neutral_or_mixed(real_sentiment_service):
     """
-    测试中性或混合情感的例子。
+    Examples of testing neutral or mixed emotions.
     """
     text = "The product is okay, but a bit expensive."
     result = real_sentiment_service.predict_sentiment(text)
     
-    assert result in ["neutral", "negative"], f"预期 'neutral' 或 'negative'，实际预测为 '{result}'"
+    assert result in ["neutral", "negative"], f"The expected outcome was 'neutral' or 'negative', but the actual prediction was... '{result}'"
