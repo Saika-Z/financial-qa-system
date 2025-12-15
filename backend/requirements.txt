@@ -28,3 +28,9 @@ sentence-transformers
 
 # 大模型支持
 #pip install transformers accelerate bitsandbytes torch
+
+#前段
+#npm install -g @vue/cli
+#pip install fastapi[all] starlette
+
+

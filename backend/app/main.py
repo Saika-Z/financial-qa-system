@@ -1,15 +1,18 @@
 '''
  # Author: Wenqing Zhao
  # Date: 2025-12-05 19:37:13
- # LastEditTime: 2025-12-08 22:38:36
+ # LastEditTime: 2025-12-15 21:49:40
  # Description: 
  # FilePath: /financial-qa-system/backend/app/main.py
 '''
 from fastapi import FastAPI
 from backend.app.services.sentiment_service import get_sentiment_service
+from backend.app.api.v1.endpoints.finance import router as finance_router
 from backend.app.core.config import settings
 from fastapi import APIRouter
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # --- 1. Define the request body data structure. ---
 # Define it in main.py or a separate schemas.py file.
@@ -49,9 +52,19 @@ def create_app():
         title="Financial QA/Sentiment API",
         version="1.0.0",
     )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # 可以设置为 ["http://localhost:8080"] 仅允许 Vue 前端跨域
+        allow_credentials=True,
+        allow_methods=["*"],  # 允许所有请求方法（GET, POST, etc）
+        allow_headers=["*"],
+    )
     
     # Includes your route
     app.include_router(api_router)
+
+    # Stock Api
+    app.include_router(finance_router, prefix="/finance", tags=["finance"])
     return app
 
 app = create_app()
