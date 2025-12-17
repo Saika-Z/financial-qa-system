@@ -1,146 +1,94 @@
-# 金融领域知识库问答系统
 
-## 项目概述
+---
 
-该项目旨在构建一个基于 **金融领域** 的智能问答系统。系统通过自然语言处理（NLP）技术，结合向量检索和生成模型，能够从大量金融文档中自动提取信息并生成精准答案。项目的核心是实现一个高效的 **知识库问答系统**，可以帮助用户查询金融领域的问题，并得到相关的答案或建议。
+# Financial QA System (RAG-based)
 
-## 项目背景
+A professional financial question-answering system utilizing **BERT** for fine-tuned information extraction and **RAG (Retrieval-Augmented Generation)** for knowledge base querying. The system features a modern **Vue.js** frontend and a robust **Python** backend.
 
-金融领域有着庞大的信息和数据需求，尤其是在投资分析、股票市场、金融报告等方面。为了帮助用户快速获取相关信息，本项目利用最新的 **NLP** 技术，构建一个 **问答系统**，它能自动从金融文档中提取答案，帮助用户在最短时间内找到所需的答案。
+## 🚀 Quick Start
 
-## 技术选型
+### 1. Prerequisites
 
-以下是该项目使用的关键技术栈和工具：
+* **Python 3.9+**
+* **Docker & Docker Compose**
+* **Node.js** (Optional, only for local frontend development)
 
-### 后端技术
+### 2. Clone the Repository
 
-- **FastAPI**：
-  - 用于构建高性能的后端 API。FastAPI 是基于 Python 的异步 Web 框架，能够处理高并发的请求，适合用于问答系统中。
-  - 支持自动化文档生成，方便前后端交互和调试。
-
-- **FAISS**：
-  - 用于高效的向量检索。FAISS 是一个由 Facebook AI 开发的开源库，专为高效检索和存储高维向量数据而设计。
-  - 适合金融文档的相似度查询，帮助快速找出与用户查询相关的文档。
-
-### NLP 和模型
-
-- **Huggingface Transformers**：
-  - 用于实现生成式问答模型（例如 **T5** 或 **BART**），基于检索到的相关文档生成回答。
-  - 支持微调并使用预训练的大模型，提高回答的准确性和自然度。
-
-- **RAG（Retrieval-Augmented Generation）**：
-  - 将检索到的文档作为上下文，利用生成模型来回答问题，结合 **FAISS** 实现信息检索和生成问答的结合。
-
-### 前端技术
-
-- **React** / **Vue.js**：
-  - 用于构建前端用户界面，展示用户输入的查询和生成的答案。
-  - 可选择 React 或 Vue.js，根据需求进行开发，前端将与后端 API 进行交互。
-
-### 部署与容器化
-
-- **Docker**：
-  - 用于将应用程序及其所有依赖打包成容器，确保系统在不同环境中的一致性和可移植性。
-  
-- **Kubernetes（可选）**：
-  - 用于容器编排和管理，确保系统可以在生产环境中水平扩展和高可用。
-
-## 系统架构
-
-系统的主要架构如下所示：
-
-```mermaid
-graph TD
-    A[用户输入查询] --> B[前端 (React/Vue.js)]
-    B --> C[FastAPI 后端]
-    C --> D[FAISS 向量数据库]
-    D --> E[相关文档/数据]
-    E --> F[NLP模型 (RAG)]
-    F --> G[生成答案]
-    G --> C
-    C --> B
-    B --> H[用户展示答案]
-```
-## 流程解释：
-
-用户在前端输入问题。
-
-前端通过 FastAPI 后端 发送查询请求。
-
-后端将查询转化为向量，发送到 FAISS 向量数据库，根据相似度查询相关文档。
-
-根据返回的相关文档，NLP模型（如 RAG）生成答案。
-
-生成的答案通过 FastAPI 后端 返回给前端展示。
-
-最终，用户在前端页面看到问题的答案。
-
-## 安装与运行
-### 环境要求
-
-Python 3.x
-
-Node.js 和 npm
-
-Docker（可选，用于容器化）
-
-### 步骤：
-
-#### 克隆项目：
-```
-git clone https://github.com/yourusername/financial-qa-system.git
+```bash
+git clone https://github.com/your-username/financial-qa-system.git
 cd financial-qa-system
-```
-
-#### 安装后端依赖：
 
 ```
-cd backend
-pip install -r requirements.txt
-```
 
-#### 启动后端：
+### 3. Initialize Assets (Models & Data)
 
-```
-uvicorn main:app --reload
-```
+Since the model weights and processed knowledge bases are large, they are hosted on **Hugging Face**. Run the initialization script to sync these assets to your local machine:
 
-#### 安装前端依赖：
+```bash
+pip install huggingface_hub
+python init_project.py
 
 ```
-cd frontend
-npm install
+
+*This script will automatically create the necessary directories and download the fine-tuned BERT model and the vectorized knowledge base.*
+
+### 4. Deploy with Docker
+
+Launch the entire stack (Frontend & Backend) using Docker Compose:
+
+```bash
+docker-compose up --build -d
+
 ```
 
-#### 启动前端：
+* **Frontend:** Access via `http://localhost:8080`
+* **Backend API:** Access via `http://localhost:8000`
+* **API documentation** Access via `http://localhost:8000/docs`
 
-npm start
+---
+
+## 🛠 Project Structure
+
+```text
+financial-qa-system/
+├── frontend/             # Vue.js Project
+│   ├── src/              # UI Components & Logic
+│   └── Dockerfile        # Multi-stage build for Nginx
+├── backend/              # Python FastAPI/Flask Backend
+│   ├── data/kb/          # Vectorized Knowledge Base (Synced via script)
+│   └── Dockerfile        # Python environment & API logic
+├── models/               # Fine-tuned BERT Models (Synced via script)
+├── init_project.py       # Asset synchronization script
+└── docker-compose.yml    # Orchestration for the full stack
+
+```
+
+---
+
+## 📊 Data & Models
+
+* **Model:** Fine-tuned BERT on Kaggle financial datasets for NER and sentiment analysis.
+* **Knowledge Base:** Processed financial news and terms stored in a vector database (FAISS/Milvus).
+* **Data Source:** Scraped from public financial news outlets and Investopedia.
+
+---
+
+## 🔧 Configuration
+
+The system uses environment variables for path management. You can modify these in the `docker-compose.yml`:
+
+| Variable | Description | Default Path |
+| --- | --- | --- |
+| `MODEL_PATH` | Path to the BERT model directory | `/app/models/bert_finance` |
+| `KB_PATH` | Path to the Knowledge Base directory | `/app/data/kb/finance_vector_db` |
 
 
-打开浏览器，访问 http://localhost:3000 来访问前端应用。
 
-## 使用说明
 
-用户在前端输入问题（如“如何分析股票市场的波动？”）。
+---
+## 📝 License
 
-系统会通过后端调用 FAISS 进行向量检索，并根据相关文档使用 NLP 模型（RAG） 生成答案。
+This project is licensed under the MIT License.
 
-答案将在前端显示给用户。
-
-## TODO
-
- 完成金融领域文档数据的预处理和向量化。
-
- 微调 RAG 模型以提高问答质量。
-
- 进一步优化 FAISS 向量检索的精度和性能。
-
- 增加更多的金融数据集，扩展知识库。
-
-## 贡献
-
-欢迎提出改进建议或贡献代码！如有问题或建议，请在 GitHub 上提交 Issue 或 Pull Request。
-
-许可证
-
-MIT License.
+---

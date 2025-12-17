@@ -1,23 +1,15 @@
-<!--
- * @Author: Wenqing Zhao
- * @Date: 2025-12-15 21:30:30
- * @LastEditTime: 2025-12-15 21:39:38
- * @Description: 
- * @FilePath: /financial-qa-system/frontend/src/App.vue
--->
 <template>
-  <div id="app">
-    <StockInfo />
-  </div>
+  <img alt="Vue logo" src="./assets/logo.png">
+  <HelloWorld msg="Welcome to Your Vue.js App"/>
 </template>
 
 <script>
-import StockInfo from './components/StockInfo.vue'
+import HelloWorld from './components/HelloWorld.vue'
 
 export default {
   name: 'App',
   components: {
-    StockInfo
+    HelloWorld
   }
 }
 </script>
