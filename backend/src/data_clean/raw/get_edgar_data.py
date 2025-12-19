@@ -1,17 +1,11 @@
-'''
- # Author: Wenqing Zhao
- # Date: 2025-12-10 10:20:25
- # LastEditTime: 2025-12-10 10:32:53
- # Description: 
- # FilePath: /financial-qa-system/backend/data/raw/getEdgarData.py
-'''
+
 from sec_edgar_downloader import Downloader
 import os
 
 # ----------------------------------------------------
-# 替换成您自己的信息。这些信息仅用于遵守 SEC 规定进行用户代理识别。
-COMPANY_NAME = "Data Science Project" # 例如: "Data Science Project"
-EMAIL_ADDRESS = "vincent0814cn@outlook.com" # 例如: "jane.doe@personal.com"
+# exchange this with your own information
+COMPANY_NAME = "Data Science Project" # example: "Data Science Project"
+EMAIL_ADDRESS = "vincent0814cn@outlook.com" # example: "vincent0814cn@outlook.com"
 # ----------------------------------------------------
 
 

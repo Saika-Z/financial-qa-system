@@ -2,7 +2,8 @@ import os
 
 # ------Project Directory Settings ----
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PROJECT_ROOT = os.path.dirname(BASE_DIR)
+#PROJECT_ROOT = os.path.dirname(BASE_DIR)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
 DATA_ROOT = os.path.join(PROJECT_ROOT, 'data', 'processed','kaggle_split')
 MODEL_SAVE_PATH = os.path.join(PROJECT_ROOT, 'models', 'sentiment_model')
