@@ -1,79 +1,47 @@
-'''
- # Author: Wenqing Zhao
- # Date: 2025-12-05 19:37:13
- # LastEditTime: 2025-12-15 21:49:40
- # Description: 
- # FilePath: /financial-qa-system/backend/app/main.py
-'''
-from fastapi import FastAPI
-from backend.app.services.sentiment_service import get_sentiment_service
-from backend.app.api.v1.endpoints.finance import router as finance_router
-from backend.app.core.config import settings
-from fastapi import APIRouter
-from pydantic import BaseModel
+# backend/app/main.py
+
+import uvicorn
+from fastapi import APIRouter, FastAPI
+from backend.app.api.endpoints.trainKaggle import router as sentiment_router
+from backend.app.api.endpoints.finance import router as finance_router
+
 from fastapi.middleware.cors import CORSMiddleware
 
 
-# --- 1. Define the request body data structure. ---
-# Define it in main.py or a separate schemas.py file.
-class SentimentRequest(BaseModel):
-    """定义POST请求体的数据结构"""
-    text: str
 
-# --- 2. Create API routes ---
-api_router = APIRouter()
-
-@api_router.post("/predict", tags=["Sentiment"])
-def predict_sentiment_endpoint(request_data: SentimentRequest):
-    """Receives text and returns the predicted sentiment result."""
-    
-    # Obtain a service instance (the model is loaded on the first call).
-    sentiment_service = get_sentiment_service()
-    
-    # Calling the core prediction method
-    predicted_sentiment = sentiment_service.predict_sentiment(request_data.text)
-    
-    return {"text": request_data.text, "sentiment": predicted_sentiment}
-
-
-# --- 3. Initialize the FastAPI application. ---
-def create_app():
-    # Attempt to load the service; if it fails, throw an error and exit.
-    try:
-        # Pre-load the model to ensure it is ready when the service starts.
-        get_sentiment_service() 
-        print("✅ Sentiment Service loaded successfully.")
-    except Exception as e:
-        print(f"❌ FATAL ERROR: Failed to load Sentiment Service: {e}")
-        # In a real-world deployment, it might be necessary to handle this more gracefully or directly raise an error to prevent the service from starting.
-        raise RuntimeError("Service initialization failed.") from e
-
+def create_app() -> FastAPI:
     app = FastAPI(
         title="Financial QA/Sentiment API",
         version="1.0.0",
     )
+    # development environment allows all origins, 
+    # in production, you must specify the vue url
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],  # 可以设置为 ["http://localhost:8080"] 仅允许 Vue 前端跨域
+        allow_origins=["*"],  
         allow_credentials=True,
-        allow_methods=["*"],  # 允许所有请求方法（GET, POST, etc）
+        # allowed HTTP methods（GET, POST, etc）
+        allow_methods=["*"],  
         allow_headers=["*"],
     )
+    base_router = APIRouter()
+    @base_router.get("/")
+    async def root():
+        return {"message": "Server is running"}
     
-    # Includes your route
-    app.include_router(api_router)
+    app.include_router(base_router, tags=["core"])
 
     # Stock Api
     app.include_router(finance_router, prefix="/finance", tags=["finance"])
-    return app
 
-app = create_app()
+    # sentiment Api
+    app.include_router(sentiment_router, prefix="/sentiment", tags=["sentiment"])
+
+    # QA Api
+
+    return app
 
 # Note: The command to run is no longer `python -m backend.app.main`, but `uvicorn`.
 if __name__ == "__main__":
-    import uvicorn
+    app = create_app()
     uvicorn.run(app, host="0.0.0.0", port=8000)
-# # uvicorn backend.app.main:api_router --host 0.0.0.0 --port 8000 --reload
-# curl -X POST "http://localhost:8000/predict" \
-# -H "Content-Type: application/json" \
-# -d '{"text": "Apple earnings exceeded all market expectations and the stock price soared."}'

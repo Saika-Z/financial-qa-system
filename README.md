@@ -27,11 +27,23 @@ Since the model weights and processed knowledge bases are large, they are hosted
 
 ```bash
 pip install huggingface_hub
+pip install -r requirements.txt
 python init_project.py
 
 ```
 
 *This script will automatically create the necessary directories and download the fine-tuned BERT model and the vectorized knowledge base.*
+
+**If a development environment is required, you can install the dependencies specified in **requirements-dev.txt**.*
+
+```bash
+pip install -r requirements-dev.txt
+
+```
+
+*This file includes additional dependencies for development purposes, such as testing tools, debugging libraries, and data processing utilities.*
+
+
 
 ### 4. Deploy with Docker
 
@@ -48,7 +60,7 @@ docker-compose up --build -d
 
 ---
 
-## 🛠 Project Structure
+## 🛠 Simple Project Structure
 
 ```text
 financial-qa-system/

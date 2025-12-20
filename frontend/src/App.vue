@@ -1,26 +1,26 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app">
+    <nav class="navbar">
+      <button @click="currentPage = 'finance'">股票行情</button>
+      <button @click="currentPage = 'sentiment'">情感分析</button>
+    </nav>
+    <div class="content">
+      <StockFinance v-if="currentPage === 'finance'" :ticker="currentTicker" />
+      <SentimentAnalysis v-else-if="currentPage === 'sentiment'" :ticker="currentTicker" />
+    </div>
+  </div>
 </template>
 
-<script>
-import HelloWorld from './components/HelloWorld.vue'
+<script setup>
+import { ref } from 'vue';
+import StockFinance from './components/StockFinance.vue'
+import SentimentAnalysis from './components/SentimentAnalysis.vue';
 
-export default {
-  name: 'App',
-  components: {
-    HelloWorld
-  }
-}
+const currentPage = ref('finance');
+const currentTicker = ref('AAPL');
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
+.navbar { margin-bottom: 20px; display: flex; gap: 10px; }
+.navbar button { padding: 10px 20px; cursor: pointer; }
 </style>

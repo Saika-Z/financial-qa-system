@@ -1,15 +1,14 @@
-'''
- # Author: Wenqing Zhao
- # Date: 2025-12-08 18:23:25
-LastEditTime: 2025-12-15 12:57:41
- # Description: 
-FilePath: sentiment_service.py
-'''
+
+# backend/app/services/sentiment_service.py
+
 from backend.app.core.config import settings
 from transformers import BertForSequenceClassification, BertTokenizer
 import torch
 import os
 import pathlib
+
+# Define a global variable to hold the singleton instance.
+sentiment_service_instance = None
 
 class SentimentService:
     def __init__(self, model_path, tokenizer_path):
@@ -42,13 +41,6 @@ class SentimentService:
         sentiment = {2: "positive", 1: "negative", 0: "neutral"}
         return sentiment[predicted_class]
 
-# Initializing inference service
-# sentiment_service_instance = SentimentService(
-#     model_path=settings.MODEL_PATH, 
-#     tokenizer_path=settings.TOKENIZER_PATH
-# )
-sentiment_service_instance: SentimentService = None # Initialize with None.
-
 def get_sentiment_service() -> SentimentService:
     """Returns the singleton instance of SentimentService; the model is loaded only on the first call."""
     global sentiment_service_instance
@@ -74,7 +66,7 @@ def get_sentiment_service() -> SentimentService:
     return sentiment_service_instance
 
 
-
-# # Reasoning examples
-# result = sentiment_service_instance.predict_sentiment("Apple's earnings report exceeded expectations.")
-# print(result)  # Output: positive
+# if __name__ == '__main__':
+#     sentiment_service_instance = get_sentiment_service()
+#     result = sentiment_service_instance.predict_sentiment("Apple's earnings report exceeded expectations.")
+#     print(result)
