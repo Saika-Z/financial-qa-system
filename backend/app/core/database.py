@@ -1,19 +1,16 @@
-'''
- # Author: Wenqing Zhao
- # Date: 2025-12-05 19:36:38
-LastEditTime: 2025-12-15 11:19:40
- # Description: 
-FilePath: database.py
-'''
+
 import os
 # --- Configuration ---
-DATA_BASE_DIR = os.path.join(os.getcwd(), 'backend', 'data', 'processed')
-VECTOR_DB_DIR = os.path.join(os.getcwd(), 'backend', 'data', 'kb', 'finance_vector_db')
+DATA_BASE_DIR = os.path.join(os.getcwd(),'data', 'processed')
+VECTOR_DB_DIR = os.path.join(os.getcwd(), 'data', 'kb', 'finance_vector_db')
+
 # Use an efficient and commonly used Sentence Transformer model for embedding.
-EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2" 
+#EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2" 
+EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
 
 # testing with a larger LLM model
-LLM_MODEL_NAME = "microsoft/Phi-3-mini-4k-instruct"
+#LLM_MODEL_NAME = "microsoft/Phi-3-mini-4k-instruct"
+LLM_MODEL_NAME = "Qwen/Qwen2.5-3B-Instruct"
 
 # --- Data source configuration (defining different partitioning strategies) ---
 SOURCES_CONFIG = {

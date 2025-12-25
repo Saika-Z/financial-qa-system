@@ -1,29 +1,32 @@
-# FastAPI and Uvicorn for building the API and serving it
+# --- basic framwork ---
 fastapi
-uvicorn[standard]
+uvicorn
+pydantic
+pydantic-settings
+python-dotenv
 
-# Transformers library for NLP models (Hugging Face)
-transformers
-# Faiss for efficient similarity search in high-dimensional spaces (CPU version)
-faiss-cpu
-# Sentence Transformers for easy sentence embeddings
-sentence-transformers
-
-# Model-related dependencies
-transformers
-accelerate
-bitsandbytes
+# --- NLP ---
 torch
+transformers
+sentence-transformers
+accelerate
 
-# Frontend tools (Vue CLI) - Install globally using npm
-# Install Vue CLI globally with npm (this is for frontend, not Python)
-# npm install -g @vue/cli
-# npm install axios
+# --- RAG & database ---
+langchain
+langchain-core
+langchain-community
+langchain-chroma
+langchain-text-splitters
+langchain-huggingface
+chromadb
+pypdf
 
-# FastAPI and Starlette for full FastAPI setup with additional features
-fastapi[all]
-starlette
+# --- finance ---
+yfinance
+pandas
+numpy
 
-# yfinance
-requests-cache
-fake-useragent
+# --- tools ---
+tqdm
+fuzzywuzzy
+python-Levenshtein

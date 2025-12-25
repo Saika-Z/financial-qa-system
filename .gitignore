@@ -1,0 +1,55 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv
+venv/
+ENV/
+env/
+
+# --- Env ---
+.env
+.flaskenv
+
+# --- model amd model file ----
+*.pth
+*.bin
+*.pkl
+checkpoint/
+/data/models/
+.cache/
+models/
+
+# --- vector and local data ---
+/data/kb/
+/data
+*.db
+*.sqlite3
+
+# --- Scraped Data ---
+sec_fillings/
+*.html
+*.jsonl
+
+# --- Logs from GoogleNews/Wikipedia ---
+google_news_cache/
+
+# ---- frontend -------
+frontend/node_modules
+
+# --- logs and temp file ---
+logs/
+*.log
+temp/
+tmp/
+
+# --- 操作系统相关 ---
+.DS_Store
+Thumbs.db
+
+# --- 编辑器相关 ---
+.vscode/
+.idea/
+*.swp
+*.swo

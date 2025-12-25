@@ -1,12 +1,3 @@
-'''
-Author: Zhao
-Date: 2025-12-08 18:03:48
-LastEditors: Please set LastEditors
-LastEditTime: 2025-12-20 18:43:58
-FilePath: config.py
-Description: 
-
-'''
 # backend/app/core/config.py 示例
 
 import os

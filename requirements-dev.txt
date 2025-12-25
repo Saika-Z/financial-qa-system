@@ -1,37 +1,20 @@
-# Kaggle API - for downloading datasets from Kaggle (if needed for development)
-# kaggle datasets download -d sbhatti/financial-sentiment-analysis
+-r requirements.txt
 
-# yfinance - library to get Yahoo Finance data (if needed for development)
-# yfinance
+# --- Data Sourcing & Web Scraping ---
+kaggle
+sec-edgar-downloader
+GoogleNews
+wikipedia-api
+requests
+beautifulsoup4
 
-# SEC Edgar Downloader - for downloading company reports from the SEC (if needed for development)
-# sec-edgar-downloader
-
-# Google News - library for getting news articles from Google News (if needed for development)
-# GoogleNews
-# pandas - data manipulation library (used together with GoogleNews for data processing)
-# pip install GoogleNews pandas
-
-# Wikipedia API - for querying Wikipedia (if needed for development)
-# wikipedia-api
-
-# BeautifulSoup & Requests - for web scraping (Investopedia example, can be extended to other websites)
-# requests
-# beautifulsoup4
-
-# RAG Chunking - for retrieval-augmented generation (RAG) with chunking (if needed for development)
-# langchain
-# sentence-transformers
-# chromadb
-# tiktoken
-# langchain-huggingface
-# langchain-community
-# langchain-chroma
-
-# Testing dependencies (for development purposes)
-pandas
-transformers
-torch
-tqdm
+# --- Training & Testing ---
+scikit-learn
 pytest
 black
+flake8
+torch
+torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# --- Data Scraping ----
+# playwright install chromium
