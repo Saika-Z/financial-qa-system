@@ -1,19 +1,13 @@
-'''
- # Author: Wenqing Zhao
- # Date: 2025-12-06 20:30:07
-LastEditTime: 2025-12-15 13:02:42
- # Description: 
-FilePath: train_sentiment_model.py
-'''
+
 # backend/src/train_sentiment_model.py
 import torch
 from torch.optim import AdamW
 from transformers import BertForSequenceClassification
 import os
 
-from config import settings
-from data_utils.dataset import get_dataloaders
-from training.trainer import SentimentTrainer
+from backend.src.config import settings
+from backend.src.data_utils.dataset import get_dataloaders
+from backend.src.training.trainer import SentimentTrainer
 
 
 def main():
@@ -59,18 +53,5 @@ def main():
 
 
 if __name__ == '__main__':
-    """
-    Ensure that when running the script, the current working directory is set to the project root
-    so that relative paths in settings.py are correctly resolved.
-    For example: If you run the script under backend/src/, you may need to adjust the path or run it from the project root.
-    """
-    
-    # temporarily change working directory to project root
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(os.path.join(current_dir, '..')) # move up to project root
-    
-    # ensure src is in sys.path
-    import sys
-    sys.path.insert(0, current_dir)
     
     main()

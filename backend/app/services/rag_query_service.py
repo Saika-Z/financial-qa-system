@@ -22,6 +22,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
+from FlagEmbedding import FlagReranker
 
 import backend.app.core.database as db
 
@@ -44,6 +45,7 @@ class RAGQueryService:
         self.retriever = None
         self.model = None
         self.llm = None
+        self.reranker = None
         self.qa_chain = None
         self.tokenizer = None
         # Prompt template for streaming mode
@@ -56,7 +58,10 @@ class RAGQueryService:
         3. **SUBJECT-PREDICATE INTEGRITY**: Ensure that the relationship between the subject and the predicate is preserved exactly as stated in the context.
         4. **NO ASSUMPTIONS**: Only use the provided information. If the context is ambiguous, state the ambiguity instead of guessing.
         5. {language_instruction}
-        6. **DIRECT OUTPUT**: Provide the final answer directly. Do NOT include phrases like "Based on the text," "Step 1," or any internal reasoning steps.
+        
+        6. **EXPERT RESPONSE FORMAT**: Provide a concise but complete sentence. For example, instead of just a name, say "Based on [Source], [Name] will [Action]...". Ensure the answer directly addresses the core of the question.
+        7. CROSS-SOURCE VALIDATION: If the context contains both official filings (e.g., Form 10-K) and news reports, prioritize official filings for formal organizational changes, but include news for recent strategic shifts. State clearly if sources provide conflicting or different information.
+        8. NUMERICAL RIGOR: Pay extra attention to years and dates. Ensure the year (e.g., 2025, 2026) is extracted exactly as written in the source text.
         
         ### CONTEXT:
         {context}
@@ -79,8 +84,7 @@ class RAGQueryService:
     def _get_optimal_device_info(self):
         """Determine the optimal device and torch dtype."""
         if torch.cuda.is_available():
-            #return "cuda", torch.float16
-            #TODO: test use bf16
+            # if bf16 cannot work, need to set dtype = torch.float16
             dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
             return "cuda", dtype
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
@@ -98,7 +102,10 @@ class RAGQueryService:
 
             self.retriever = self.vector_store.as_retriever(
                 search_type="similarity",
-                search_kwargs={"k": 10},
+                search_kwargs = {
+                    "k": 30
+                }
+
             )
             print("Chroma DB loaded and retriever created.")
         except Exception as e:
@@ -128,9 +135,16 @@ class RAGQueryService:
             self.model = AutoModelForCausalLM.from_pretrained(
                 db.LLM_MODEL_NAME,
                 device_map="auto" if self.device == "cuda" else None,
-                torch_dtype=self.compute_dtype,
+                dtype=self.compute_dtype,
                 low_cpu_mem_usage=True,
             )
+
+            self.reranker = FlagReranker(
+                db.RERANKER_MODEL_NAME,
+                device=self.device,
+                use_fp16=(self.device == "cuda")
+            )
+            print(f" {db.RERANKER_MODEL_NAME} loaded successfully. ")
 
             if self.device == "mps":
                 self.model = self.model.to("mps")
@@ -153,7 +167,7 @@ class RAGQueryService:
 
             self.qa_chain = (
                 {
-                    "context": itemgetter("question") | self.retriever, 
+                    "context": itemgetter("context"), 
                     "question": RunnablePassthrough(), 
                     "language_instruction": itemgetter("lang_instruction")
                     }
@@ -165,6 +179,36 @@ class RAGQueryService:
         except Exception as e:
             print(f"❌ Error initializing LLM pipeline: {e}")
             print("❌ Falling back to None. RAG queries will fail.")
+    
+    
+    def _get_reranked_context(self, question: str):
+        """"""
+        # 1. rough rank ( retriever set k=30)
+        docs = self.retriever.invoke(question)
+        if not self.reranker or not docs:
+            return docs[:7]
+        
+        # 2. Rerank
+        pairs = [[question, d.page_content] for d in docs]
+        scores = self.reranker.compute_score(pairs)
+
+        # 3. add weight and sort
+        scored_list = []
+        for doc, score in zip(docs, scores):
+            source = doc.metadata.get('source', '').lower()
+            # 10-k with more weight
+            boosted_score = score + 0.8 if ("edgar" in source or "10k" in source) else score
+            scored_list.append((doc, boosted_score))
+
+        # sorted by score desc
+        scored_list.sort(key=lambda x: x[1], reverse=True)
+
+        # Debug
+        print("\n[Rerank Result]")
+        for i, (d, s) in enumerate(scored_list[:5]):
+            print(f"Rank {i}: Score {s:.2f} | Source: {d.metadata.get('source')}")
+        
+        return [d for d, s in scored_list[:7]]
     
     def _get_language_instruction(self, text: str) -> str:
         """Extract the language instruction from the text."""
@@ -182,7 +226,7 @@ class RAGQueryService:
             text = text.replace(token, "")
 
         text = re.sub(r"^(回答|答|Answer|Output):\s*", "", text)
-        return text.strip()
+        return text
 
     def ingest_data_into_vector_store(self):
         """
@@ -335,14 +379,14 @@ class RAGQueryService:
 
         lang_inst = self._get_language_instruction(question)
 
-        docs = self.retriever.invoke(question)
-        for i, d in enumerate(docs):
-            print(f"[{i}] Source: {d.metadata.get('source')} | Content: {d.page_content[:100]}...")
-        print("-----------------------------------\n")
+        final_docs = self._get_reranked_context(question)
+
+        context_text = "\n\n".join([f"Source: {d.metadata.get('source')}\n{d.page_content}" for d in final_docs])
 
         if self.qa_chain:
             print(f"\n ----- Querying RAG system with question: {question} -----")
             response = self.qa_chain.invoke({
+                "context": context_text,
                 "question": question,
                 "lang_instruction": lang_inst
             })
@@ -364,11 +408,20 @@ class RAGQueryService:
         lang_inst = self._get_language_instruction(question)
 
         # 1. checking stage (k=10)
-        docs = self.retriever.invoke(question)
-        context = "\n\n".join([f"--- Document [{i+1}] (source: {d.metadata.get('source')}) ---\n{d.page_content}" for i, d in enumerate(docs)])
+        final_docs = self._get_reranked_context(question)
+        context_text = "\n\n".join([f"Source: {d.metadata.get('source')}\n{d.page_content}" for d in final_docs])
+        context_parts = []
+        for i, d in enumerate(final_docs):
+            source_raw = d.metadata.get('source', 'Unknown')
+            source_label = source_raw.split('__')[0]
+
+            doc_str = f"[DOCUMENT {i+1}]\nSOURCE: {source_label}\nCONTENT: {d.page_content}"
+            context_parts.append(doc_str)
+        context_text = "\n\n".join(context_parts)
+
 
         # 2. Prompt
-        full_prompt = self.template.format(context=context, question=question, language_instruction = lang_inst)
+        full_prompt = self.template.format(context=context_text, question=question, language_instruction = lang_inst)
 
         # 3. set streamer
         streamer = TextIteratorStreamer(
@@ -383,24 +436,28 @@ class RAGQueryService:
             "do_sample": True,
             "temperature": 0.1,
             "top_p": 0.9,
-            "repetition_penalty": 1.2,
-            "no_repeat_ngram_size": 3
+            "repetition_penalty": 1.2
         }
 
         # 4. generate
-        thread = Thread(
-            target=self.model.generate,
-            kwargs=generation_kwargs,
-        )
+        print(f"\n ----- Querying RAG system with question: {question} -----")
+        def threaded_generate():
+            with torch.no_grad():
+                self.model.generate(**generation_kwargs)
+        
+        thread = Thread(target=threaded_generate)
         thread.start()
 
         # 5. output
-        for new_text in streamer:
-            if new_text:
-            # clean output by removing special tokens and prefixes（such as <|im_end|>）
-                cleaned_text = self._clean_output_chunk(new_text)
-                if cleaned_text:
-                    yield cleaned_text
+        try:
+            for new_text in streamer:
+                if new_text:
+                # clean output by removing special tokens and prefixes（such as <|im_end|>）
+                    cleaned_text = self._clean_output_chunk(new_text)
+                    if cleaned_text:
+                        yield cleaned_text
+        finally:
+            thread.join()
 
     def clear_gpu_memory(self):
         """Manually release GPU and model memory."""
@@ -416,9 +473,14 @@ class RAGQueryService:
         print("Memory cleared.")
 
 
-if __name__ == "__main__":
-    service = RAGQueryService()
-    # service.ingest_data_into_vector_store()
+# if __name__ == "__main__":
+#     service = RAGQueryService()
+#     # service.ingest_data_into_vector_store()
 
-    test_question = "Who is the successor to Chris Kondo according to Item 9B?"
-    print(service.query(test_question))
+#     #test_question = "what is 10-k report?"
+#     #test_question = "根据财报和最近的新闻，苹果的财务领导层和 AI 团队分别有什么最新的人事变动？"
+#     test_question = "分别查阅 10-K 财报和最新新闻，总结苹果财务团队和 AI 团队的变动。"
+#     #print(service.query(test_question))
+
+#     for chunk in service.query_stream(test_question):
+#         print(chunk,end="", flush=True)

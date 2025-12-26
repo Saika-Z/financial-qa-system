@@ -1,17 +1,18 @@
-# --- basic framwork ---
+# --- Basic Framework ---
 fastapi
 uvicorn
 pydantic
 pydantic-settings
 python-dotenv
+python-multipart
 
-# --- NLP ---
-torch
+# --- NLP & Rerank ---
 transformers
 sentence-transformers
 accelerate
+FlagEmbedding
 
-# --- RAG & database ---
+# --- RAG & Database ---
 langchain
 langchain-core
 langchain-community
@@ -21,12 +22,12 @@ langchain-huggingface
 chromadb
 pypdf
 
-# --- finance ---
+# --- Finance & Data ---
 yfinance
 pandas
 numpy
 
-# --- tools ---
+# --- Tools ---
 tqdm
 fuzzywuzzy
 python-Levenshtein

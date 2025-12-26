@@ -12,6 +12,9 @@ EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
 #LLM_MODEL_NAME = "microsoft/Phi-3-mini-4k-instruct"
 LLM_MODEL_NAME = "Qwen/Qwen2.5-3B-Instruct"
 
+# Reranker model
+RERANKER_MODEL_NAME="BAAI/bge-reranker-v2-m3"
+
 # --- Data source configuration (defining different partitioning strategies) ---
 SOURCES_CONFIG = {
     'concept': {
@@ -24,7 +27,7 @@ SOURCES_CONFIG = {
     'report': {
         'path': os.path.join(DATA_BASE_DIR, 'company_reports'),
         'chunk_size': 1500,
-        'chunk_overlap': 200,
+        'chunk_overlap': 400,
         'doc_type': 'SEC_MDA_Report',
         'format': 'txt'   # <-- Indicates that the file needs to be processed using a Text Splitter.
     },

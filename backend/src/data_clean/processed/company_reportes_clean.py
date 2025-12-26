@@ -2,125 +2,132 @@ from bs4 import BeautifulSoup
 import re
 import os
 
-def clean_edgar_html(file_path):
-    """
-    Process SEC file, extracting and cleaning the HTML/XBRL content within the <TEXT> tags.
-
-    file_path (str): Path to the HTML file to be cleaned.
-    """
+def clean_with_beautifulsoup(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             content = file.read()
 
-        # --- 1. find the <TEXT> tag content ---
-        # tags in SEC usually are uppercase
-        text_match = re.search(r'<TEXT>(.*?)</TEXT>', content, re.DOTALL)
-        if not text_match:
-            print("❌ The content of the <TEXT> tag was not found.")
-            return None
-        
-        html_content = text_match.group(1)
+        # 1. 提取 <TEXT> 标签（兼容大小写）
+        text_match = re.search(r'<(TEXT|text)>(.*?)</\1>', content, re.DOTALL)
+        html_content = text_match.group(2) if text_match else content
 
-        # --- 2. BeautifulSoup parsing ---
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # --- 3. Remove noisy tags ---
-        # remove <script> and <style> tags
-        for element in soup(['title', 'meta', 'head', 'script', 'style']):
+        # 2. 【优化】去除真正的噪声标签（不含正文内容的）
+        for element in soup(['title', 'meta', 'head', 'script', 'style', 'header', 'footer']):
             element.decompose()
-        
 
-        # Remove XBRL related tags, but keep their text content
+        # 3. 【核心修改】处理 XBRL 标签
+        # 不要 decompose，而是使用 unwrap()。这会去掉标签但保留里面的文字。
+        # 例如 <ix:nonNumeric>None.</ix:nonNumeric> 变成 None.
         for xbrl_tag in soup.find_all(re.compile(r'^(ix|xbrl|dei|us-gaap|srt|country|aapl|xbrli|xlink):.*', re.IGNORECASE)):
-            if xbrl_tag:
-                xbrl_tag.decompose()
+            xbrl_tag.unwrap() 
 
-        # Remove tags with style display:none or ix tags entirely
-        for xbrl_tag in soup.find_all(True):
-            if xbrl_tag and xbrl_tag.get('style', '') == 'display:none' or 'ix' in xbrl_tag.name:
-                xbrl_tag.decompose()
-
-        # Remove tables to avoid noisy data
+        # 4. 表格处理
+        # 很多财报数据在表格里，直接 decompose 会丢失数据。
+        # 建议先将表格转为简单的文本，或者如果确实不要表格数据，再 decompose。
+        # 这里我们保留文字，只去掉结构
         for table in soup.find_all('table'):
-            table.decompose()
+            # 如果你确实不想看复杂的表格数据，可以用空格替换它，但不要删掉里面的字
+            table.insert_after(soup.new_string(" [Table Data] "))
+            table.unwrap()
+
+        # 5. 获取纯文本
+        # 使用 separator=' ' 确保 <div> 之间有空格，防止单词粘在一起
+        raw_text = soup.get_text(separator=' ')
+
+        # 6. 强力文本清洗
+        # a. 处理 HTML 转义字符 (如 &#160;)
+        text = raw_text.replace('\xa0', ' ').replace('&#160;', ' ')
         
-        # --- 4. get key text ---
-        cleaned_content = re.sub(r'http[s]?://\S+', '', str(soup))
-        raw_text = BeautifulSoup(cleaned_content, 'html.parser').get_text('\n\n')
+        # b. 去除特殊符号（保留标点）
+        text = re.sub(r'[☐☒\t]', ' ', text)
 
-        # --- 5. Clean text ---
-        # Remove multiple spaces, newlines, and tabs
-        text = ' '.join(raw_text.split())
+        # c. 处理 Item 标题的换行问题，确保 Item 9C. [Title] 格式连贯
+        # 这有助于向量模型识别“标题-内容”关系
+        text = re.sub(r'(Item\s+\d+[A-Z]?\.?)\s+', r'\n\1 ', text, flags=re.IGNORECASE)
 
-        # Remove page markers like "Page X of Y" or "F-X"
-        text = re.sub(r'UNITED STATES SECURITIES AND EXCHANGE COMMISSION.*?None', '', text, flags=re.DOTALL | re.IGNORECASE)
-        text = re.sub(r'\s{2,}', ' ', text).strip()
+        # d. 合并过多的空格和换行
+        text = re.sub(r'\s{2,}', ' ', text)
+        text = re.sub(r'\n\s*\n', '\n\n', text)
 
-
-        mda_start_pattern = re.compile(r'ITEM\s*7\W*MANAGEMENT\'S\s+DISCUSSION\s+AND\s+ANALYSIS', re.IGNORECASE)
-        mda_end_pattern = re.compile(r'ITEM\s*8\W*FINANCIAL\s+STATEMENTS', re.IGNORECASE)
-        mda_match = mda_start_pattern.search(text)
-        text = re.sub(r'[☐☒]', '', text)
-        if mda_match:
-            mda_start = mda_match.end()
-            mda_end_match = mda_end_pattern.search(text, mda_start)
-            
-            if mda_end_match:
-                mda_text = text[mda_start:mda_end_match.start()]
-                print("✅ Successfully extracted the MD&A section (V2)。")
-                return mda_text.strip()
+        # 7. 【重要】不再强制截断 MD&A
+        # 如果你想保留整份报告用于 RAG，直接返回全文
         return text.strip()
 
     except Exception as e:
-        print(f"❌ An error occurred while parsing the EDGAR file.: {e}")
+        print(f"❌ 解析错误: {e}")
         return None
-    
-def test_clean_demo(test_file_path):
-    # Example usage
-    document_content = """
-    <SEC-DOCUMENT>0000320193-25-000079.txt : 20251031
-    <SEC-HEADER>... (省略元数据) ...</SEC-HEADER>
-    <DOCUMENT>
-    <TYPE>10-K
-    <SEQUENCE>1
-    <FILENAME>aapl-20250927.htm
-    <DESCRIPTION>10-K
-    <TEXT>
-    <XBRL>
-    <?xml version='1.0' encoding='ASCII'?>
-    ... (大量 XBRL/HTML 标签) ...
-    <html xmlns="http://www.w3.org/1999/xhtml" ...><head>...</head><body><div style="display:none">...</div>
-    <p>This is the start of the report narrative.</p>
-    <h2>ITEM 7. MANAGEMENT'S DISCUSSION AND ANALYSIS</h2>
-    <p>The Company achieved record revenues in 2025 in the Services segment. This segment grew by 15% year-over-year.</p>
-    <p>Our cash position remains strong, allowing for continued share buybacks.</p>
-    <h2>ITEM 8. FINANCIAL STATEMENTS</h2>
-    <p>The detailed financial tables follow below.</p>
-    </body></html>
-    </TEXT>
-    </DOCUMENT>
-    </SEC-DOCUMENT>
-    """
-    with open(test_file_path, 'w', encoding='utf-8') as test_file:
-        test_file.write(document_content) 
 
+# def clean_edgar_html_v3(file_path):
+#     # ... 之前的 BeautifulSoup 处理 ...
+#     text = soup.get_text(separator=' ')
     
+#     # 找到正文开始的标志性词汇
+#     start_keywords = ["FORM 10-K", "UNITED STATES SECURITIES AND EXCHANGE COMMISSION"]
+#     start_index = -1
+#     for kw in start_keywords:
+#         idx = text.find(kw)
+#         if idx != -1:
+#             start_index = idx
+#             break
+            
+#     if start_index != -1:
+#         # 只保留从 FORM 10-K 开始的内容
+#         text = text[start_index:]
+    
+#     # 过滤掉包含过多 http 或 xbrl 关键字的行
+#     lines = text.split('\n')
+#     cleaned_lines = [line for line in lines if "http://" not in line and "xbrli:" not in line]
+#     text = '\n'.join(cleaned_lines)
+    
+#     return text.strip()
+
+def clean_edgar_full_pipeline(file_path):
+    # --- 第一步：BeautifulSoup 基础清洗 (你现有的逻辑) ---
+    # 记得把之前的 .decompose() 改为 .unwrap() 以免丢掉 "Not applicable"
+    raw_cleaned_text = clean_with_beautifulsoup(file_path) 
+
+    if not raw_cleaned_text:
+        return None
+
+    # --- 第二步：针对性过滤 (v3 建议) ---
+    # 1. 找到真正的正文起点，切掉开头的元数据
+    # SEC 文件的正文通常从 "UNITED STATES" 或 "FORM 10-K" 开始
+    start_match = re.search(r'(UNITED\s+STATES\s+SECURITIES|FORM\s+10-K)', raw_cleaned_text, re.IGNORECASE)
+    if start_match:
+        raw_cleaned_text = raw_cleaned_text[start_match.start():]
+
+    # 2. 移除残留的 XBRL 专用术语和无效链接
+    # 这些通常是清洗后剩下的 http 链接或 xbrli 标识
+    patterns_to_remove = [
+        r'http[s]?://\S+',               # 链接
+        r'\b\w+:\S+',                    # 类似 us-gaap:xxx 或 xbrli:xxx 的内容
+        r'\b000\d{7}\b',                 # CIK 编号
+        r'\b[A-Z0-9]{10,}\b',            # 长的机器编码
+        r'(false|true|FY|P1Y|iso4217)',  # 常见的 XBRL 状态词
+    ]
+    
+    for pattern in patterns_to_remove:
+        raw_cleaned_text = re.sub(pattern, '', raw_cleaned_text)
+
+    # 3. 最后的美化：合并空格，保持段落
+    final_text = re.sub(r'\s{2,}', ' ', raw_cleaned_text)
+    
+    return final_text.strip()
+
+
 if __name__ == "__main__":
     
-    
-    #file_path = 'backend/data/processed/edgar_test.txt'
-    #test_clean_demo(file_path)
 
     file_path = 'backend/data/raw/company_reports/sec-edgar-filings/AAPL/10-K/0000320193-25-000079/full-submission.txt'
     
     
-    cleaned_text = clean_edgar_html(file_path)
+    cleaned_text = clean_edgar_full_pipeline(file_path)
 
     save_path = 'backend/data/processed/company_reports'
     filename = 'cleaned_edgar_AAPL_10K.txt'
-    #filename = '112.txt'
-
-
+    
     if not os.path.exists(save_path):
         os.makedirs(save_path)
 
