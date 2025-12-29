@@ -5,9 +5,10 @@ from torch.optim import AdamW
 from transformers import BertForSequenceClassification
 import os
 
+from backend.src.training.model import MultiTaskModel
 from backend.src.config import settings
 from backend.src.data_utils.dataset import get_dataloaders
-from backend.src.training.trainer import SentimentTrainer
+from backend.src.training.trainer import MultiTaskTrainer
 
 
 def main():
@@ -17,39 +18,44 @@ def main():
 
     # 1. data loaders
     train_dl, val_dl, test_dl, tokenizer = get_dataloaders(
-        train_path=settings.TRAIN_DATA_PATH,
-        val_path=settings.VAL_DATA_PATH,
-        test_path=settings.TEST_DATA_PATH,
+        sentiment_paths={
+            "train": settings.KAGGLE_CLEAN_TRAIN,
+            "val": settings.KAGGLE_CLEAN_VAL,
+            "test": settings.KAGGLE_CLEAN_TEST
+        },
+        intent_path=settings.INTENTION_BERT_DATA,
         model_name=settings.MODEL_NAME,
         batch_size=settings.BATCH_SIZE,
         max_seq_len=settings.MAX_SEQ_LEN
     )
 
     # 2. model initialization
-    model = BertForSequenceClassification.from_pretrained(
+    model = MultiTaskModel(
         settings.MODEL_NAME,
-        num_labels=settings.NUM_LABELS
+        num_sentiment=settings.NUM_SENTIMENT,
+        num_intent=settings.NUM_INTENT
     )
     model.to(device)
+    print(f" Model loaded from {settings.MODEL_NAME} successfully.")
 
     # 3. optimizer and trainer setup
     optimizer = AdamW(model.parameters(), lr=settings.LEARNING_RATE)
     
-    trainer = SentimentTrainer(
+    trainer = MultiTaskTrainer(
         model=model,
         optimizer=optimizer,
         device=device,
         save_path=settings.MODEL_SAVE_PATH,
         tokenizer=tokenizer
     )
-
+    
     # 4. training loop
     trainer.train(train_dl, val_dl, settings.EPOCHS)
     
     # 5. final evaluation on test set
     print("\nFinal evaluation on Test Set...")
-    test_loss, test_accuracy = trainer.evaluate(test_dl)
-    print(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_accuracy:.4f}")
+    avg_loss, acc_s, acc_i = trainer.evaluate(test_dl)
+    print(f"test loss: {avg_loss:.4f} | sentiment acc: {acc_s:.4f} | intent acc: {acc_i:.4f}")
 
 
 if __name__ == '__main__':

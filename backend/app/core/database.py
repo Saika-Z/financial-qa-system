@@ -2,7 +2,7 @@
 import os
 # --- Configuration ---
 DATA_BASE_DIR = os.path.join(os.getcwd(),'data', 'processed')
-VECTOR_DB_DIR = os.path.join(os.getcwd(), 'data', 'kb', 'finance_vector_db')
+VECTOR_DB_DIR = os.path.join(os.getcwd(), 'models', 'kb', 'finance_vector_db')
 
 # Use an efficient and commonly used Sentence Transformer model for embedding.
 #EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2" 

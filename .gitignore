@@ -19,7 +19,7 @@ env/
 checkpoint/
 /data/models/
 .cache/
-models/
+/models/
 
 # --- vector and local data ---
 /data/kb/

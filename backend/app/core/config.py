@@ -1,3 +1,4 @@
+
 # backend/app/core/config.py 示例
 
 import os
@@ -15,12 +16,9 @@ class Settings:
     # ... Other service-related configurations
 
     # --- Model Configuration ---
-    # Define the relative path for saving the model, and combine it with PROJECT_ROOT to obtain the absolute path.
-    MODEL_SUBDIR = 'sentiment_model'
-
     # Define the absolute path for saving the model\
-    # \financial-qa-system\models\sentiment_model
-    MODEL_PATH: str = os.path.join(PROJECT_PATH, 'models' ,MODEL_SUBDIR)
+    # \financial-qa-system\models\
+    MODEL_PATH: str = os.path.join(PROJECT_PATH, 'models' )
     print(f"DEBUG: Model Path attempting to load: {MODEL_PATH}")
     
     # Because the tokenizer and the model are saved in the same path, the paths are identical.
