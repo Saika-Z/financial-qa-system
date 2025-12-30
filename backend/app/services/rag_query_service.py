@@ -472,15 +472,21 @@ class RAGQueryService:
 
         print("Memory cleared.")
 
+    # async def query(self, text):
+    #     # 这里只做纯粹的检索逻辑，不加载模型
+    #     vector = self.model.encode(text)
+    #     results = self.vector_db.search(vector)
+    #     return results
 
-if __name__ == "__main__":
-    service = RAGQueryService()
-    #service.ingest_data_into_vector_store()
 
-    test_question = "what is 10-k report?"
-#     #test_question = "根据财报和最近的新闻，苹果的财务领导层和 AI 团队分别有什么最新的人事变动？"
-#     test_question = "分别查阅 10-K 财报和最新新闻，总结苹果财务团队和 AI 团队的变动。"
-    print(service.query(test_question))
+# if __name__ == "__main__":
+#     service = RAGQueryService()
+#     #service.ingest_data_into_vector_store()
 
-#     for chunk in service.query_stream(test_question):
-#         print(chunk,end="", flush=True)
+#     test_question = "what is 10-k report?"
+# #     #test_question = "根据财报和最近的新闻，苹果的财务领导层和 AI 团队分别有什么最新的人事变动？"
+# #     test_question = "分别查阅 10-K 财报和最新新闻，总结苹果财务团队和 AI 团队的变动。"
+#     print(service.query(test_question))
+
+# #     for chunk in service.query_stream(test_question):
+# #         print(chunk,end="", flush=True)

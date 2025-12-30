@@ -1,7 +1,7 @@
 
 # backend/app/services/sentiment_service.py
 
-from backend.app.core.config import settings
+from backend.app.core.config import config
 from transformers import BertForSequenceClassification, BertTokenizer
 import torch
 import os
@@ -46,7 +46,7 @@ def get_sentiment_service() -> SentimentService:
     global sentiment_service_instance
     if sentiment_service_instance is None:
 
-        model_path = settings.MODEL_PATH
+        model_path = config.LOCAL_BERT_PATH
 
         model_dir = pathlib.Path(model_path)
 
@@ -60,13 +60,13 @@ def get_sentiment_service() -> SentimentService:
              )
 
         sentiment_service_instance = SentimentService(
-            model_path=settings.MODEL_PATH, 
-            tokenizer_path=settings.TOKENIZER_PATH
+            model_path=config.MODEL_PATH, 
+            tokenizer_path=config.LOCAL_BERT
         )
     return sentiment_service_instance
 
 
-# if __name__ == '__main__':
-#     sentiment_service_instance = get_sentiment_service()
-#     result = sentiment_service_instance.predict_sentiment("Apple's earnings report exceeded expectations.")
-#     print(result)
+if __name__ == '__main__':
+    sentiment_service_instance = get_sentiment_service()
+    result = sentiment_service_instance.predict_sentiment("Apple's earnings report exceeded expectations.")
+    print(result)

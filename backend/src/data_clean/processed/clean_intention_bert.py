@@ -1,3 +1,12 @@
+'''
+Author: Zhao
+Date: 2025-12-29 10:58:27
+LastEditors: 
+LastEditTime: 2025-12-30 17:52:44
+FilePath: clean_intention_bert.py
+Description: 
+
+'''
 
 # /backend/src/data_clean/processed/clean_intention_bert.py
 import os
@@ -24,8 +33,8 @@ def clean_json_file(file_path):
         else:
             return []
         
-        if 'Text' in df.columns:
-            df['Text'] = df['Text'].apply(clean_text)
+        # if 'Text' in df.columns:
+        #     df['Text'] = df['Text'].apply(clean_text)
         if 'Label' in df.columns:
             df['label'] = df['Label'].str.lower().map(intent_map)
         if 'Ticker' in df.columns:

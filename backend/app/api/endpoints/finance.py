@@ -3,12 +3,12 @@
 
 from fastapi import APIRouter, HTTPException
 from backend.app.services.finance_service import FinanceService
-from backend.app.core.config import Settings
+from backend.app.core.config import config
 
 router = APIRouter()
 
 # local test set env=development to avoid rate limits
-finance_service = FinanceService(dev_mode=Settings.DEV_MODE)
+
 
 @router.get("/stock/{ticker}/all")
 async def get_stock_all_in_one(ticker: str):

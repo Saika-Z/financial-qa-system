@@ -2,12 +2,15 @@ import yfinance as yf
 from functools import lru_cache
 import time
 import pandas as pd
+import backend.app.core.config as config
+from rapidfuzz import process, fuzz
 
 class FinanceService:
 
     def __init__(self, dev_mode=False):
         # if True will use mock data not from yfinance
         self.dev_mode = dev_mode
+        self.ticker_map = config.TICKER_MAP
 
     @lru_cache(maxsize=128)
     def _fetch_from_yahoo(self, ticker_str, timestamp_bin):
@@ -60,6 +63,48 @@ class FinanceService:
     
         except Exception as e:
             return {"error": "Rate limit exceeded, please try later."}
+        
+    
+    def extract_ticker(self, text: str) -> str:
+        """
+        get Ticker from text
+        """
+        text = text.lower()
+
+        # strategy A: directly match (if user inputs like AAPL )
+        potential_tickers = re.findall(r'\b[a-zA-Z]{1,5}\b', text)
+        for t in potential_tickers:
+            if t.upper() in self.TICKER_MAP.values():
+                return t.upper()
+
+        # strategy B: fuzzy match (sloving, such as “特斯拉”、“特拉斯”, brief words)
+        # extractOne return (match, score, index)
+        result = process.extractOne(
+            text, 
+            self.TICKER_MAP.keys(), 
+            scorer=fuzz.partial_ratio
+        )
+        
+        if result and result[1] > 70:  # score > 70 as success 
+            matched_name = result[0]
+            return self.TICKER_MAP[matched_name]
+
+        return "UNKNOWN"
+    
+    async def get_stock_data(self, ticker: str):
+        """
+        return data (support mock data)
+        """
+        if self.dev_mode or ticker == "UNKNOWN":
+            return {
+                "ticker": ticker if ticker != "UNKNOWN" else "Unknown Asset",
+                "price": "185.20",
+                "change": "+1.5%",
+                "status": "MOCK_DATA"
+            }
+        #TODO : yfinance logic needed to add here
+
+        return {"ticker": ticker, "price": "100.00", "change": "0.0%"}
     
 # if __name__ == "__main__":
 #     finance_service = FinanceService(dev_mode=True)
