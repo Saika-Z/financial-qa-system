@@ -1,4 +1,3 @@
-
 # backend/app/main.py
 
 import uvicorn
@@ -6,17 +5,23 @@ from fastapi import APIRouter, FastAPI
 from backend.app.api.endpoints.trainKaggle import router as sentiment_router
 from backend.app.api.endpoints.finance import router as finance_router
 from backend.app.api.endpoints.qa import router as qa_router
-from backend.app.api.endpoints.chat import router as chat_router
+from backend.app.api.endpoints.chat_endpoint import router as chat_router
 
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from backend.app.services.inference import FinancialPredictor
-from backend.app.services.rag_query_service import RAGQueryService
+from backend.app.services.rag_query_service_new import RAGQueryService
 from backend.app.core.config import config
+import torch
+import gc
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    gc.collect()
+    torch.cuda.empty_cache()
     # --- 【启动时执行】 ---
     print(f"Loading Model: {config.LOCAL_BERT_PATH}...")
     # 将加载好的模型挂载到 app.state 中

@@ -11,6 +11,7 @@ transformers
 sentence-transformers
 accelerate
 FlagEmbedding
+bitsandbytes
 
 # --- RAG & Database ---
 langchain

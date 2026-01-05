@@ -1,4 +1,3 @@
-
 # backend/app/core/config.py 示例
 
 import os
@@ -19,7 +18,7 @@ class Config:
     # Define the absolute path for saving the model\
     # \financial-qa-system\models\
     MODEL_PATH: str = os.path.join(PROJECT_PATH, 'models' )
-    print(f"DEBUG: Model Path attempting to load: {MODEL_PATH}")
+    #print(f"DEBUG: Model Path attempting to load: {MODEL_PATH}")
 
     BERT_PATH_NAME = "sentiment_intention_bert"
     BASE_MODE_NAME = "bert-base-multilingual-cased"
