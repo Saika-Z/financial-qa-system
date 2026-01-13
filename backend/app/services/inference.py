@@ -9,9 +9,6 @@ import regex as re
 from backend.app.core.config import config
 
 
-#---- This script is for valadation the model ----
-
-# --- 1. Define Model must be same as training ---
 class MultiTaskModel(nn.Module):
     def __init__(self, model_name, num_sentiment=3, num_intent=3):
         super(MultiTaskModel, self).__init__()
@@ -95,49 +92,7 @@ class FinancialPredictor:
             "intent": intent_label,
             "intent_confidence": f"{intent_conf:.2%}"
         }
-            
-            # # get prediction
-            # sent_idx = torch.argmax(sent_logits, dim=1).item()
-            # intent_idx = torch.argmax(intent_logits, dim=1).item()
-            
-            # # get probability
-            # sent_probs = torch.softmax(sent_logits, dim=1)[0][sent_idx].item()
-            # intent_probs = torch.softmax(intent_logits, dim=1)[0][intent_idx].item()
 
-        # return {
-        #     "text": text,
-        #     "sentiment": self.id2sent[sent_idx],
-        #     "sent_confidence": f"{sent_probs:.2%}",
-        #     "intent": self.id2intent[intent_idx],
-        #     "intent_confidence": f"{intent_probs:.2%}"
-        # }
-    def extract_ticker(self, text: str) -> str:
-        """
-        get Ticker from text
-        """
-        text = text.lower()
-
-        # strategy A: directly match (if user inputs like AAPL )
-        potential_tickers = re.findall(r'\b[a-zA-Z]{1,5}\b', text)
-        for t in potential_tickers:
-            if t.upper() in self.ticker_map.values():
-                return t.upper()
-
-        # strategy B: fuzzy match (sloving, such as “特斯拉”、“特拉斯”, brief words)
-        # extractOne return (match, score, index)
-        result = process.extractOne(
-            text, 
-            self.ticker_map.keys(), 
-            scorer=fuzz.partial_ratio
-        )
-        
-        if result and result[1] > 70:  # score > 70 as success 
-            matched_name = result[0]
-            return self.ticker_map[matched_name]
-
-        return "UNKNOWN"
-
-# --- 3. test ---
 if __name__ == "__main__":
     predictor = FinancialPredictor(config.LOCAL_BERT_PATH, config.BASE_MODE_NAME)
 
@@ -150,11 +105,3 @@ if __name__ == "__main__":
         "帮我解释一下什么是量化宽松" # 中文测试：意图应为 RAG
     ]
     predictor.extract_ticker("特斯拉最近的业绩报告出炉了吗？")
-
-    # print("\n--- Model Inference Test ---")
-    # for text in test_cases:
-    #     res = predictor.predict(text)
-    #     print("-" * 50)
-    #     print(f"Input: {res['text']}")
-    #     print(f"Result: {res['sentiment']} (Conf: {res['sent_confidence']})")
-    #     print(f"Intent: {res['intent']} (Conf: {res['intent_confidence']})")

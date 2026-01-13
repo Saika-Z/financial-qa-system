@@ -1,12 +1,12 @@
+
 # backend/app/main.py
 
 import uvicorn
 from fastapi import APIRouter, FastAPI
-from backend.app.api.endpoints.trainKaggle import router as sentiment_router
-from backend.app.api.endpoints.finance import router as finance_router
-from backend.app.api.endpoints.qa import router as qa_router
 from backend.app.api.endpoints.chat_endpoint import router as chat_router
-
+from backend.app.api.endpoints.chatstream_endpoint import router as chatstream_router
+from backend.app.services.tools.finance_client import FinanceClient
+from backend.app.services.tools.ticker_tool import TickerExtractor
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -22,22 +22,28 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 async def lifespan(app: FastAPI):
     gc.collect()
     torch.cuda.empty_cache()
-    # --- 【启动时执行】 ---
+    # --- setup ---
     print(f"Loading Model: {config.LOCAL_BERT_PATH}...")
-    # 将加载好的模型挂载到 app.state 中
+    # load model
     app.state.predictor = FinancialPredictor(config.LOCAL_BERT_PATH, config.BASE_MODE_NAME)
     
     app.state.rag_service = RAGQueryService()
 
+    app.state.ticker_tool = TickerExtractor()
+
+    app.state.finance_client = FinanceClient()
+
     print("✅ All models loaded.")
 
     
-    yield  # 这里是应用运行的时间点
+    yield  # this is where the app runs
     
-    # --- 【关闭时执行】 ---
+    # --- shutdown ---
     print("Shutting down... releasing resources.")
     del app.state.predictor
     del app.state.rag_service
+    del app.state.finance_client
+    del app.state.ticker_tool
 
 def create_app() -> FastAPI:
     app = FastAPI(
@@ -62,17 +68,10 @@ def create_app() -> FastAPI:
     
     app.include_router(base_router, tags=["core"])
 
-    # Stock Api
-    app.include_router(finance_router, prefix="/finance", tags=["finance"])
-
-    # sentiment Api
-    app.include_router(sentiment_router, prefix="/sentiment", tags=["sentiment"])
-
-    # QA Api
-    app.include_router(qa_router, prefix="/qa", tags=["qa"])
-
     # chat Api
-    app.include_router(chat_router, prefix="/chat", tags=["chat"])
+    #app.include_router(chat_router, prefix="/chat", tags=["chat"]) # test
+
+    app.include_router(chatstream_router, prefix="/api", tags=["chatstream"])
 
     return app
 
