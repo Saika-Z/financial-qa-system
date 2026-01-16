@@ -9,19 +9,21 @@ class SentimentDataset(Dataset):
     """
     dataset for sentiment analysis
     """
-    def __init__(self, encodings, labels, task_ids):
+    def __init__(self, encodings, sentiment_labels, intent_labels, task_ids):
         self.encodings = encodings
-        self.labels = labels
+        self.sentiment_labels = sentiment_labels
+        self.intent_labels = intent_labels
         self.task_ids = task_ids
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.sentiment_labels)
 
     def __getitem__(self, item):
         return{
             'input_ids': self.encodings['input_ids'][item].squeeze(0),
             'attention_mask': self.encodings['attention_mask'][item].squeeze(0),
-            'labels': torch.tensor(self.labels[item], dtype=torch.long),
+            'sentiment_labels': torch.tensor(self.sentiment_labels[item], dtype=torch.long),
+            'intent_labels': torch.tensor(self.intent_labels[item], dtype=torch.long),
             'task_id': torch.tensor(self.task_ids[item],dtype=torch.long)
         }
 
@@ -32,15 +34,14 @@ def get_dataloaders(sentiment_paths, intent_path, model_name, batch_size, max_se
 
     # 1. load data
     # sentence file
-    s_train = pd.read_csv(sentiment_paths['train'])
-    s_val = pd.read_csv(sentiment_paths['val'])
-    s_test = pd.read_csv(sentiment_paths['test'])
-    
+    s_train_df = pd.read_csv(sentiment_paths['train'])
+    s_val_df = pd.read_csv(sentiment_paths['val'])
+    s_test_df = pd.read_csv(sentiment_paths['test'])
+
     # intention file
     i_df = pd.read_csv(intent_path)
-    # simple split, only get 90% of data for training
-    i_train = i_df.sample(frac=0.9, random_state=42)
-    i_val = i_df.drop(i_train.index)
+    i_train_df = i_df.sample(frac=0.9, random_state=42)
+    i_val_df = i_df.drop(i_train_df.index)
 
 
     # 2. tokenization
@@ -50,38 +51,54 @@ def get_dataloaders(sentiment_paths, intent_path, model_name, batch_size, max_se
     # 3. define a inner function: tagging and encoding
     def encode_data(df, text_col, task_id):
         texts = df[text_col].tolist()
-        labels = df['label'].tolist()
+        raw_labels = df['label'].tolist()
+        sentiment_labels = []
+        intent_labels = []
+
+        if task_id == 0:
+            # kaggle data. intent_labels is -100 to ignore
+            sentiment_labels = raw_labels
+            intent_labels = [-100] * len(df)
+        else:
+            sentiment_labels = [0] * len(df)
+            intent_labels = raw_labels
+
         task_ids = [task_id] * len(df)
         encodings = tokenizer(texts, **params)
-        return SentimentDataset(encodings, labels, task_ids)
+
+        return SentimentDataset(encodings, sentiment_labels, intent_labels, task_ids)
 
     # 4. create train and val dataset
-    train_dataset = torch.utils.data.ConcatDataset([
-        encode_data(s_train, 'Sentence', task_id = 0),
-        encode_data(i_train, 'Text', task_id = 1)
-    ])
+    # -- train --
+    ds_s_train = encode_data(s_train_df, 'Sentence', task_id=0)
+    ds_i_train = encode_data(i_train_df, 'Text', task_id=1)
+    train_dataset = torch.utils.data.ConcatDataset([ds_s_train, ds_i_train])
 
-    val_dataset = torch.utils.data.ConcatDataset([
-        encode_data(s_val, 'Sentence', task_id = 0),
-        encode_data(i_val, 'Text', task_id = 1)
-    ])
+    # -- valdation --
+    ds_s_val = encode_data(s_val_df, 'Sentence', task_id=0)
+    ds_i_val = encode_data(i_val_df, 'Text', task_id=1)
+    val_dataset = torch.utils.data.ConcatDataset([ds_s_val, ds_i_val])
 
-    # intention files are limited so use val as test
-    test_dataset = torch.utils.data.ConcatDataset([
-        encode_data(s_test, 'Sentence', task_id = 0),
-        encode_data(i_val, 'Text', task_id = 1)
-    ])
+    # -- test --
+    ds_s_test = encode_data(s_test_df, 'Sentence', task_id=0)
+    test_dataset = torch.utils.data.ConcatDataset([ds_s_test, ds_i_val])
 
     # 5. weights and create DataLoader
-    num_s = len(s_train)
-    num_i = len(i_train)
+    num_s = len(ds_s_train)
+    num_i = len(ds_i_train)
 
     weights = [1.0 / num_s] * num_s + [1.0 / num_i] * num_i
-    sampler = WeightedRandomSampler(weights, num_samples=num_s+num_i, replacement=True)
+    sampler = WeightedRandomSampler(
+        weights=weights, 
+        num_samples=len(train_dataset), 
+        replacement=True
+    )
 
     train_loader = DataLoader(train_dataset, batch_size=batch_size, sampler=sampler)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    # valadation and test don't need sampler
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
+    print(f"DEBUG: num_s={num_s}, num_i={num_i}, concat_len={len(train_dataset)}")
     
     return train_loader, val_loader, test_loader, tokenizer

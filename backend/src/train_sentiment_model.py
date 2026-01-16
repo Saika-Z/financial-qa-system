@@ -28,6 +28,15 @@ def main():
         batch_size=settings.BATCH_SIZE,
         max_seq_len=settings.MAX_SEQ_LEN
     )
+    for batch in train_dl:
+        s_labels = batch['sentiment_labels']
+        i_labels = batch['intent_labels']
+        # 过滤掉 -100 后，检查最大值
+        valid_s = s_labels[s_labels != -100]
+        valid_i = i_labels[i_labels != -100]
+        if (valid_s >= 3).any() or (valid_i >= 3).any():
+            print("发现非法标签！标签值必须在 0-2 之间。")
+        break
 
     # 2. model initialization
     model = MultiTaskModel(

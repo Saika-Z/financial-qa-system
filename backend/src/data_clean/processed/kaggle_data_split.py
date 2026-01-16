@@ -1,17 +1,15 @@
-'''
- # Author: Wenqing Zhao
- # Date: 2025-12-06 20:29:42
- # LastEditTime: 2025-12-11 14:26:02
- # Description: 
- # FilePath: /financial-qa-system/backend/data/processed/kaggle_data_split.py
-'''
+# /backend/src/data_clean/processed/kaggle_data_split.py
+
 import pandas as pd
+import os
 from sklearn.model_selection import train_test_split
 
 # --- 1. Data loading and initial splitting (training set + remaining set) ---
 
-kaggle_data = "backend/data/raw/kaggle/kaggle_data.csv"
+kaggle_data = "data/raw/kaggle/kaggle_data.csv"
 data = pd.read_csv(kaggle_data)
+output_path = "data/processed/kaggle_split"
+
 
 # Label encoding (assuming 'positive': 2, 'negative': 1, 'neutral': 0)
 label_map = {'positive': 2, 'negative': 1, 'neutral': 0}
@@ -40,7 +38,15 @@ print(f"Training set size: {len(train_df)}") # Approximately 80%
 print(f"Validation set size: {len(val_df)}")   # Approximately 10%
 print(f"Test set size: {len(test_df)}")   # Approximately 10%
 
+
+if not os.path.exists(output_path):
+    os.makedirs(output_path)
+
+out_train_path = os.path.join(output_path, "train.csv")
+out_val_path = os.path.join(output_path, "val.csv")
+out_test_path = os.path.join(output_path, "test.csv")  
+
 # 3. Saving after partitioning
-train_df.to_csv("backend/data/processed/kaggle_split/train.csv", index=False)
-val_df.to_csv("backend/data/processed/kaggle_split/val.csv", index=False)
-test_df.to_csv("backend/data/processed/kaggle_split/test.csv", index=False)
+train_df.to_csv(out_train_path, index=False)
+val_df.to_csv(out_val_path, index=False)
+test_df.to_csv(out_test_path, index=False)

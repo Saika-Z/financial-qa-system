@@ -13,6 +13,7 @@ from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
     TextIteratorStreamer,
+    BitsAndBytesConfig,
     pipeline,
 )
 
@@ -69,9 +70,13 @@ class RAGQueryService:
         ### QUESTION:
         {question}
         
-        ### FINAL ANSWER:"""      
+        ### FINAL ANSWER:"""     
+        
+        # --- 4. Initialize LLM
+        print(f" Pre-loading LLM on {self.device}...")
+        self._prepare_llm()  
 
-        # --- 4. Load existing vector store if available
+        # --- 5. Load existing vector store if available
         if os.path.exists(db.VECTOR_DB_DIR) and os.listdir(db.VECTOR_DB_DIR):
             print(f"✅ Found existing vector store at {db.VECTOR_DB_DIR}, loading...")
             self._init_vector_store()
@@ -129,12 +134,24 @@ class RAGQueryService:
         )
 
         try:
+            if self.device == "mps":
+                self.model = self.model.to("mps")
+
+            print(f" start to initialize LLM with 4-bit quantization...")
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_use_double_quant=True,
+                bnb_4bit_quant_type="nf4",
+                bnb_4bit_compute_dtype=torch.float16
+            )
+
             print(f"Loading tokenizer and model: {db.LLM_MODEL_NAME}...")
             self.tokenizer = AutoTokenizer.from_pretrained(db.LLM_MODEL_NAME)
 
             self.model = AutoModelForCausalLM.from_pretrained(
                 db.LLM_MODEL_NAME,
                 device_map="auto" if self.device == "cuda" else None,
+                quantization_config=bnb_config,
                 dtype=self.compute_dtype,
                 low_cpu_mem_usage=True,
             )
@@ -145,9 +162,6 @@ class RAGQueryService:
                 use_fp16=(self.device == "cuda")
             )
             print(f" {db.RERANKER_MODEL_NAME} loaded successfully. ")
-
-            if self.device == "mps":
-                self.model = self.model.to("mps")
 
             pipe = pipeline(
                 task="text-generation",
@@ -372,16 +386,27 @@ class RAGQueryService:
 
     def query(self, question: str):
         """Execute a standard (non-streaming) RAG query."""
+        import time
+        start_time = time.time()
+        print(f"DEBUG: 开始检索耗时 {start_time}")
+        
+              
         if not self.vector_store:
             return "Error: Vector store is not initialized."
 
-        self._prepare_llm()
+        if self.model is None or self.tokenizer is None:
+            return " Error: LLM Model is not initialized. Check Initialization."
+
 
         lang_inst = self._get_language_instruction(question)
 
         final_docs = self._get_reranked_context(question)
 
         context_text = "\n\n".join([f"Source: {d.metadata.get('source')}\n{d.page_content}" for d in final_docs])
+        
+        
+        print(f"DEBUG: 检索完成耗时 {time.time() - start_time}")
+        mid_time = time.time()
 
         if self.qa_chain:
             print(f"\n ----- Querying RAG system with question: {question} -----")
@@ -391,19 +416,22 @@ class RAGQueryService:
                 "lang_instruction": lang_inst
             })
             
+            print(f"DEBUG: LLM生成耗时 {time.time() - mid_time}")
 
             clean_response = response.split("Question:")[0].split("###")[0].strip()
             return clean_response
 
         return "Error: QA chain is not initialized."
-
-    def query_stream(self, question: str):
+    
+    async def query_stream(self, question: str):
         """Execute a streaming RAG query."""
         if not self.vector_store:
-            yield "Error: Vector store is not initialized."
+            yield " Error: Vector store is not initialized."
             return
-
-        self._prepare_llm()
+        
+        if self.model is None or self.tokenizer is None:
+            yield " Error: LLM Model is not initialized. Check Initialization."
+            return
 
         lang_inst = self._get_language_instruction(question)
 
@@ -449,13 +477,30 @@ class RAGQueryService:
         thread.start()
 
         # 5. output
+        first_chunk = True
         try:
             for new_text in streamer:
                 if new_text:
-                # clean output by removing special tokens and prefixes（such as <|im_end|>）
-                    cleaned_text = self._clean_output_chunk(new_text)
-                    if cleaned_text:
+                    # 只有在第一帧或者还没开始输出正文时才清理前缀
+                    if first_chunk:
+                        # 这里的正则去掉了 \s*，改为手动处理或更精确的匹配
+                        cleaned_text = re.sub(r"^(回答|答|Answer|Output):", "", new_text).lstrip()
+                        if cleaned_text:
+                            first_chunk = False # 只要清理出内容了，就标记为非第一帧
                         yield cleaned_text
+                    else:
+                        # 后续片段直接清理停止符，不再清理前缀和空格
+                        stop_tokens = ["<|endoftext|>", "<|im_end|>", "</s>", "<pad>"]
+                        for token in stop_tokens:
+                            new_text = new_text.replace(token, "")
+                        yield new_text
+        # try:
+        #     for new_text in streamer:
+        #         if new_text:
+        #         # clean output by removing special tokens and prefixes（such as <|im_end|>）
+        #             cleaned_text = self._clean_output_chunk(new_text)
+        #             if cleaned_text:
+        #                 yield cleaned_text
         finally:
             thread.join()
 
@@ -481,12 +526,12 @@ class RAGQueryService:
 
 # if __name__ == "__main__":
 #     service = RAGQueryService()
-#     #service.ingest_data_into_vector_store()
+# #     #service.ingest_data_into_vector_store()
 
 #     test_question = "what is 10-k report?"
-# #     #test_question = "根据财报和最近的新闻，苹果的财务领导层和 AI 团队分别有什么最新的人事变动？"
-# #     test_question = "分别查阅 10-K 财报和最新新闻，总结苹果财务团队和 AI 团队的变动。"
-#     print(service.query(test_question))
+#     #test_question = "根据财报和最近的新闻，苹果的财务领导层和 AI 团队分别有什么最新的人事变动？"
+# # #     test_question = "分别查阅 10-K 财报和最新新闻，总结苹果财务团队和 AI 团队的变动。"
+#     #print(service.query(test_question))
 
-# #     for chunk in service.query_stream(test_question):
-# #         print(chunk,end="", flush=True)
+#     for chunk in service.query_stream(test_question):
+#         print(chunk,end="", flush=True)

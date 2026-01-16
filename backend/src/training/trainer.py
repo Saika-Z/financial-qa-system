@@ -13,7 +13,8 @@ class MultiTaskTrainer:
         self.save_path = save_path
         self.tokenizer = tokenizer
         self.best_val_accuracy = 0.0
-        self.criterion = torch.nn.CrossEntropyLoss()
+        self.criterion = torch.nn.CrossEntropyLoss(ignore_index=-100)
+        #self.criterion = torch.nn.CrossEntropyLoss()
 
     def train_epoch(self, data_loader):
         """single epoch training"""
@@ -26,69 +27,94 @@ class MultiTaskTrainer:
             # move data to device
             input_ids = batch['input_ids'].to(self.device)
             attention_mask = batch['attention_mask'].to(self.device)
-            labels = batch['labels'].to(self.device)
-            task_ids = batch['task_id'].to(self.device)
+            sent_labels = batch['sentiment_labels'].to(self.device)
+            intent_labels = batch['intent_labels'].to(self.device)
             
             # forward
             sent_logits, intent_logits = self.model(input_ids, attention_mask)
             
             # calculate loss
-            batch_loss = 0
-            if (task_ids == 0).any():
-                batch_loss += self.criterion(sent_logits[task_ids == 0], labels[task_ids == 0])
-            if (task_ids == 1).any():
-                batch_loss += self.criterion(intent_logits[task_ids == 1], labels[task_ids == 1])
+            loss_sent = self.criterion(sent_logits, sent_labels)
+            loss_intent = self.criterion(intent_logits, intent_labels)
+
+            batch_loss = torch.tensor(0.0, device=self.device)
+
+            if not torch.isnan(loss_sent):
+                batch_loss += loss_sent
             
-            if torch.is_tensor(batch_loss):
+            if not torch.isnan(loss_intent):
+                batch_loss += loss_intent
+
+            if batch_loss > 0:
                 batch_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 self.optimizer.step()
                 running_loss += batch_loss.item()
-        
+            else:
+                continue
+                
         return running_loss / len(data_loader)
+
+        #     batch_loss.backward()
+        #     torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
+        #     self.optimizer.step()
+        #     running_loss += batch_loss.item()
+        
+        # return running_loss / len(data_loader)
 
     def evaluate(self, data_loader):
         """evaluate model performance with loss and multi-task accuracy"""
         self.model.eval()
         total_loss = 0
+        valid_steps = 0
         results = {
-            0: {"correct": 0, "total": 0},
-            1: {"correct": 0, "total": 0},
+            "sent": {"correct": 0, "total": 0},
+            "intent": {"correct": 0, "total": 0},
         }
         
         with torch.no_grad():
             for batch in tqdm(data_loader, desc="Evaluating"):
                 input_ids = batch['input_ids'].to(self.device)
                 attention_mask = batch['attention_mask'].to(self.device)
-                labels = batch['labels'].to(self.device)
-                task_ids = batch['task_id'].to(self.device)
+                sent_labels = batch['sentiment_labels'].to(self.device)
+                intent_labels = batch['intent_labels'].to(self.device)
 
 
                 sent_logits, intent_logits = self.model(input_ids, attention_mask)
                 
                 # --- calculate loss for each task ---
-                batch_loss = 0
-                if(task_ids == 0).any():
-                    batch_loss = self.criterion(sent_logits[task_ids == 0], labels[task_ids == 0])
-                if(task_ids == 1).any():
-                    batch_loss = self.criterion(intent_logits[task_ids == 1], labels[task_ids == 1])
-                if torch.is_tensor(batch_loss):
-                    total_loss += batch_loss.item()
+                loss_sent = self.criterion(sent_logits, sent_labels)
+                loss_intent = self.criterion(intent_logits, intent_labels)
 
-                # --- calculate accuracy for each task ---
-                if (task_ids == 0).any():
-                    _, preds = torch.max(sent_logits[task_ids == 0], dim=1)
-                    results[0]["correct"] += (preds == labels[task_ids == 0]).sum().item()
-                    results[0]["total"] += (task_ids == 0).sum().item()
+                current_batch_loss = 0.0
+                has_valid_loss = False
 
-                if (task_ids == 1).any():
-                    _, preds = torch.max(intent_logits[task_ids == 1], dim=1)
-                    results[1]["correct"] += (preds == labels[task_ids == 1]).sum().item()
-                    results[1]["total"] += (task_ids == 1).sum().item()
+                if not torch.isnan(loss_sent):
+                    current_batch_loss += loss_sent.item()
+                    has_valid_loss = True
+                if not torch.isnan(loss_intent):
+                    current_batch_loss += loss_intent.item()
+                    has_valid_loss = True
+                
+                if has_valid_loss:
+                    total_loss += current_batch_loss
+                    valid_steps += 1
+                
+                sent_mask = (sent_labels != -100)
+                if sent_mask.any():
+                    _, sent_preds = torch.max(sent_logits[sent_mask], dim=1)
+                    results["sent"]["correct"] += (sent_preds == sent_labels[sent_mask]).sum().item()
+                    results["sent"]["total"] += sent_mask.sum().item()
 
-        avg_loss = total_loss / len(data_loader)
-        acc_s = results[0]["correct"] / results[0]["total"] if results[0]["total"] > 0 else 0
-        acc_i = results[1]["correct"] / results[1]["total"] if results[1]["total"] > 0 else 0
+                intent_mask = (intent_labels != -100)
+                if intent_mask.any():
+                    _, intent_preds = torch.max(intent_logits[intent_mask], dim=1)
+                    results["intent"]["correct"] += (intent_preds == intent_labels[intent_mask]).sum().item()
+                    results["intent"]["total"] += intent_mask.sum().item()
+
+        avg_loss = total_loss / valid_steps if valid_steps > 0 else 0
+        acc_s = results["sent"]["correct"] / results["sent"]["total"] if results["sent"]["total"] > 0 else 0
+        acc_i = results["intent"]["correct"] / results["intent"]["total"] if results["intent"]["total"] > 0 else 0
         return avg_loss, acc_s, acc_i
         
     def save_checkpoint(self, val_accuracy):

@@ -77,16 +77,28 @@ const sendMessage = async () => {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
 
+    let pendingBuffer = "";
+
     // eslint-disable-next-line no-constant-condition
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
+      pendingBuffer = decoder.decode(value, { stream: true });
 
-      //console.log(">>> 收到原始块:", JSON.stringify(chunk));
-      
-      processSSEEvent(chunk, currentAiMsg);
+      let boundary = pendingBuffer.indexOf('\n\n');
+
+      while (boundary !== -1){
+        const completeBlock = pendingBuffer.slice(0, boundary).trim();
+        pendingBuffer = pendingBuffer.slice(boundary + 2);
+        
+        if (completeBlock) {
+          //console.log(">>> 收到原始块:", JSON.stringify(pendingBuffer));
+            processSSEEvent(completeBlock, currentAiMsg);
+        }
+
+        boundary = pendingBuffer.indexOf('\n\n')
+      }
     }
   } catch (error) {
     currentAiMsg._rawContent += "\n[网络连接错误]";
@@ -97,29 +109,47 @@ const sendMessage = async () => {
 };
 
 // 5. 解析 SSE 事件块
-const processSSEEvent = (chunk, currentAiMsg) => {
-  const lines = chunk.split('\n');
-  lines.forEach(line => {
-    if (line.startsWith('data: ')) {
-      const data = line.replace('data: ', '').trim();
-      currentAiMsg._rawContent += data; 
+const processSSEEvent = (block, currentAiMsg) => {
+    const lines = block.split('\n');
+    let eventType = 'message'; // 默认事件类型
+    let dataContent = '';
+
+    lines.forEach(line => {
+        if (line.startsWith('event:')) {
+            eventType = line.replace('event:', '').trim();
+        } else if (line.startsWith('data:')) {
+            dataContent = line.replace('data:', '').trim();
+        }
+    });
+
+    if (!dataContent) return;
+
+    try {
+        if (eventType === 'metadata') {
+            const meta = JSON.parse(dataContent);
+            currentAiMsg.sentiment = meta.sentiment;
+            
+        } 
+        else if (eventType === 'finance') {
+            const finance = JSON.parse(dataContent);
+            currentAiMsg.financeData = finance;
+            // 金融数据由 FinanceCard 渲染，不操作 _rawContent
+        }
+        else if (eventType === 'message') {
+            // 只有文本消息进入打字机缓冲区
+            currentAiMsg._rawContent += dataContent;
+        } 
+        else if (eventType === 'end') {
+            currentAiMsg.status = 'done';
+        }
+    } catch (e) {
+        // 如果是纯文本而不是 JSON，且解析失败，可以视作普通消息（容错处理）
+        if (eventType === 'message') {
+            currentAiMsg._rawContent += dataContent;
+        }
+        console.warn("SSE JSON Parse Error:", e);
     }
-  let eventType = '';
-  let dataStr = '';
-
-  if (!eventType || !dataStr) return;
-
-  if (eventType === 'metadata') {
-    currentAiMsg.sentiment = JSON.parse(dataStr).sentiment;
-  } else if (eventType === 'finance') {
-    currentAiMsg.financeData = JSON.parse(dataStr);
-  } else if (eventType === 'message') {
-    // 依然需要累加字符串，因为 Markdown 是根据完整字符串渲染的
-    currentAiMsg.content += dataStr; 
-  }
-  });
 };
-
 const scrollToBottom = async () => {
   await nextTick();
   if (messagesContainer.value) {
@@ -127,6 +157,7 @@ const scrollToBottom = async () => {
   }
 };
 </script>
+
 
 <template>
   <div class="chat-wrapper"> 
@@ -255,6 +286,57 @@ const scrollToBottom = async () => {
   border-top: 1px solid #eee;
   display: flex;
   gap: 10px;
+}
+.citations-box {
+  margin: 12px 0 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #4a90e2;
+  font-size: 0.9em;
+  color: #444;
+}
+
+.citations-title {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+}
+
+.citation-item {
+  margin: 8px 0;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.cite-index {
+  color: #4a90e2;
+  font-weight: bold;
+  margin-right: 6px;
+}
+
+.file {
+  font-weight: 500;
+  color: #1e3a8a;
+}
+
+.score {
+  margin-left: 8px;
+  color: #6b7280;
+  font-size: 0.85em;
+}
+
+.score.high {
+  color: #16a34a;
+  font-weight: bold;
+}
+
+.snippet {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.85em;
+  line-height: 1.4;
+  font-style: italic;
 }
 
 input {
