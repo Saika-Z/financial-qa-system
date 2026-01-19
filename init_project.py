@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import platform
+import shutil
 from huggingface_hub import snapshot_download
 
 def run_command(command):
@@ -11,39 +12,66 @@ def run_command(command):
     except subprocess.CalledProcessError as e:
         print(f"❌ command failed: {e}")
 
-def install_dependencies():
-    """ Automated dependency installation logic """
-    print("📦 Step 1: checking env and installing dependencies ...")
 
-    # 1. install basic dependencies
-    run_command(["pip", "install", "-r", "requirements.txt"])
+def install_python_dependencies():
+    print("\n 📦 Step 1: installing python dependencies ...")
+    run_command([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
-    # System-specific PyTorch installation
     system = platform.system()
     if system == "Darwin":
         print("🍎 Mac OS detected, installing MPS-optimized Torch...")
-        run_command(["pip", "install", "torch", "torchvision", "torchaudio"])
-    elif system == "Linux" or system == "Windows":
+        run_command([sys.executable, "-m", "pip", "install", "torch", "torchvision", "torchaudio"])
+    else:
         print("💻 PC system (Linux/Windows) detected, attempting to install CUDA 12.1 optimized Torch...")
-        # Default to installation with CUDA support
-        run_command(["pip", "install", "torch", "torchvision", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cu121"])
+        run_command([sys.executable, "-m", "pip", "install", "torch", "torchvision", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cu121"])
 
-def download_assets():
+def install_frontend_assets():
+    """ Automated dependency installation logic """
+    print("📦 Step 2: and installing frontend dependencies ...")
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+    if not os.path.exists(FRONTEND_DIR):
+        print(f"⚠️ cannot find frontend : {FRONTEND_DIR}，skipping。")
+        return
+    
+    if not shutil.which("npm"):
+        print("❌ Error: cannot find npm。Please install Node.js before proceeding。")
+        return
+    
+    print(f"📥 npm installing (path: {FRONTEND_DIR})...")
+    run_command(["npm", "install"], cwd=FRONTEND_DIR)
+
+    # 2. 确保 vue 和 markdown-it 存在 (防止 package.json 没写)
+    print("📥 making sur vue and markdown-it status ...")
+    run_command(["npm", "install", "vue", "markdown-it"], cwd=FRONTEND_DIR)
+
+def download_hf_assets():
+    print("\n🚀 Step 3: downloading model and data from Hugging Face (this may take a while) ...")
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
     MODELS_ROOT = os.path.join(BASE_DIR, "models")
-    SENTIMENT_DIR = os.path.join(MODELS_ROOT, "sentiment_model")
-    RERANKER_DIR = os.path.join(MODELS_ROOT, "bge-reranker-v2-m3")
-    KB_DIR = os.path.join(BASE_DIR, "data")
-
-    SENTIMENT_REPO = "Saika-Zh/bert-finance-qa-model" 
-    DATA_REPO = "Saika-Zh/financial-qa-data"
-    RERANKER_REPO = "BAAI/bge-reranker-v2-m3"
 
     assets = [
-        {"name": "Sentiment Analysis Model", "repo": SENTIMENT_REPO, "path": SENTIMENT_DIR, "type": "model"},
-        {"name": "Reranker Model", "repo": RERANKER_REPO, "path": RERANKER_DIR, "type": "model"},
-        {"name": "Knowledge Base Data", "repo": DATA_REPO, "path": KB_DIR, "type": "dataset"},
+        {
+            "name": "Sentiment Model", 
+            "repo": "Saika-Zh/bert-kb-fin-qa",
+            "path": os.path.join(MODELS_ROOT, "sentiment_model"), 
+            "type": "model"
+        },
+        {
+            "name": "Reranker Model", 
+            "repo": "BAAI/bge-reranker-v2-m3", 
+            "path": os.path.join(MODELS_ROOT, "bge-reranker-v2-m3"), 
+            "type": "model"
+        },
+        {
+            "name": "Knowledge Base Data", 
+            "repo": "Saika-Zh/financial-qa-data", 
+            "path": os.path.join(BASE_DIR, "data"), 
+            "type": "dataset"
+        },
     ]
 
     print("🚀 Step 2: Syncing models and assets (this may take a while)...")
@@ -63,9 +91,14 @@ def download_assets():
 
 def init_project():
     # execute in order：env -> dependencies -> assets
-    install_dependencies()
-    download_assets()
+    print("=== Project Init ===")
+    install_python_dependencies()
+    install_frontend_assets()
+    download_hf_assets()
+    print("\n" + "="*30)
     print("\n✨ project init success! Now can run run.py to start the server")
+    print("\n Run 'python run.py' to start the server")
+    print("\n" + "="*30)
 
 if __name__ == "__main__":
     init_project()
