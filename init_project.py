@@ -8,7 +8,9 @@ from huggingface_hub import snapshot_download
 def run_command(command):
     """ execute command and print result """
     try:
-        subprocess.check_call([sys.executable, "-m"] + command)
+        full_command = [sys.executable, "-m"] + command if is_python else command
+        print(f"executing: {' '.join(full_command)}")
+        subprocess.check_call(full_command, cwd=cwd)
     except subprocess.CalledProcessError as e:
         print(f"❌ command failed: {e}")
 
@@ -20,10 +22,13 @@ def install_python_dependencies():
     system = platform.system()
     if system == "Darwin":
         print("🍎 Mac OS detected, installing MPS-optimized Torch...")
-        run_command([sys.executable, "-m", "pip", "install", "torch", "torchvision", "torchaudio"])
+        run_command(["pip", "install", "torch", "torchvision", "torchaudio"], is_python=True)
     else:
         print("💻 PC system (Linux/Windows) detected, attempting to install CUDA 12.1 optimized Torch...")
-        run_command([sys.executable, "-m", "pip", "install", "torch", "torchvision", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cu121"])
+        run_command([
+            "pip", "install", "torch", "torchvision", "torchaudio", 
+            "--index-url", "https://download.pytorch.org/whl/cu121"
+        ], is_python=True)
 
 def install_frontend_assets():
     """ Automated dependency installation logic """
@@ -36,16 +41,17 @@ def install_frontend_assets():
         print(f"⚠️ cannot find frontend : {FRONTEND_DIR}，skipping。")
         return
     
-    if not shutil.which("npm"):
+    npm_path = shutil.which("npm")
+    if not npm_path:
         print("❌ Error: cannot find npm。Please install Node.js before proceeding。")
         return
     
     print(f"📥 npm installing (path: {FRONTEND_DIR})...")
-    run_command(["npm", "install"], cwd=FRONTEND_DIR)
+    run_command([npm_path, "install"], cwd=FRONTEND_DIR)
 
     # 2. 确保 vue 和 markdown-it 存在 (防止 package.json 没写)
     print("📥 making sur vue and markdown-it status ...")
-    run_command(["npm", "install", "vue", "markdown-it"], cwd=FRONTEND_DIR)
+    run_command([npm_path, "install", "vue", "markdown-it"], cwd=FRONTEND_DIR)
 
 def download_hf_assets():
     print("\n🚀 Step 3: downloading model and data from Hugging Face (this may take a while) ...")
@@ -91,6 +97,7 @@ def download_hf_assets():
 
 def init_project():
     # execute in order：env -> dependencies -> assets
+    print("="*30)
     print("=== Project Init ===")
     install_python_dependencies()
     install_frontend_assets()
