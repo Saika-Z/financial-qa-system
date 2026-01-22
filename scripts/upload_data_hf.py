@@ -22,7 +22,7 @@ def upload_data():
             "__pycache__/*", 
             "*.DS_Store",
             "upload_data_hf.py",
-            ".cache",
+            ".cache/*",
             "*.log",
             "tmp/*"
         ], 

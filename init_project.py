@@ -5,7 +5,7 @@ import platform
 import shutil
 from huggingface_hub import snapshot_download
 
-def run_command(command):
+def run_command(command, cwd=None, is_python=False):
     """ execute command and print result """
     try:
         full_command = [sys.executable, "-m"] + command if is_python else command
@@ -63,13 +63,7 @@ def download_hf_assets():
         {
             "name": "Sentiment Model", 
             "repo": "Saika-Zh/bert-kb-fin-qa",
-            "path": os.path.join(MODELS_ROOT, "sentiment_model"), 
-            "type": "model"
-        },
-        {
-            "name": "Reranker Model", 
-            "repo": "BAAI/bge-reranker-v2-m3", 
-            "path": os.path.join(MODELS_ROOT, "bge-reranker-v2-m3"), 
+            "path": os.path.join(MODELS_ROOT), 
             "type": "model"
         },
         {

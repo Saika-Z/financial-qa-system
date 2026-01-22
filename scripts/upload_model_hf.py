@@ -18,9 +18,10 @@ def upload_model():
         ignore_patterns=[
             os.path.basename(__file__), # 动态排除脚本名
             ".git*", 
+            ".cache/*",
             "__pycache__/*", 
             "*.DS_Store",
-            "upload_to_hf.py"
+            "bge-reranker-v2-m3/*"
         ], 
     )
     

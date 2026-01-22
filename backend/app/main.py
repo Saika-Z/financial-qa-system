@@ -1,4 +1,3 @@
-
 # backend/app/main.py
 
 import uvicorn
@@ -11,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from backend.app.services.inference import FinancialPredictor
-from backend.app.services.rag_query_service_new import RAGQueryService
+from backend.app.services.rag_query_service import RAGQueryService
 from backend.app.core.config import config
 import torch
 import gc
